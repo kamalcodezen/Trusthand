@@ -6,6 +6,7 @@ import Service from "@/components/homepage/Service";
 import TopArtisans from "@/components/homepage/TopArtisans";
 
 import TrustStandards from "@/components/homepage/TrustStandards";
+import WorkerCta from "@/components/homepage/WorkerCta";
 
 export default function HomePage() {
   return (
@@ -16,6 +17,7 @@ export default function HomePage() {
       <TrustStandards />
       <TopArtisans />
       <MarketIntelligence />
+      <WorkerCta />
     </main>
   );
 }
