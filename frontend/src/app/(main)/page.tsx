@@ -2,6 +2,8 @@
 import Hero from "@/components/homepage/Hero";
 import Process from "@/components/homepage/Process";
 import Service from "@/components/homepage/Service";
+import TopArtisans from "@/components/homepage/TopArtisans";
+
 import TrustStandards from "@/components/homepage/TrustStandards";
 
 export default function HomePage() {
@@ -11,6 +13,7 @@ export default function HomePage() {
       <Service />
       <Process />
       <TrustStandards />
+      <TopArtisans />
     </main>
   );
 }
