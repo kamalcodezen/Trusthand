@@ -1,5 +1,6 @@
 
 import Hero from "@/components/homepage/Hero";
+import MarketIntelligence from "@/components/homepage/MarketIntelligence";
 import Process from "@/components/homepage/Process";
 import Service from "@/components/homepage/Service";
 import TopArtisans from "@/components/homepage/TopArtisans";
@@ -14,6 +15,7 @@ export default function HomePage() {
       <Process />
       <TrustStandards />
       <TopArtisans />
+      <MarketIntelligence />
     </main>
   );
 }
