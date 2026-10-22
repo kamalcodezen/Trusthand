@@ -2,6 +2,7 @@
 import Hero from "@/components/homepage/Hero";
 import Process from "@/components/homepage/Process";
 import Service from "@/components/homepage/Service";
+import TrustStandards from "@/components/homepage/TrustStandards";
 
 export default function HomePage() {
   return (
@@ -9,6 +10,7 @@ export default function HomePage() {
       <Hero />
       <Service />
       <Process />
+      <TrustStandards />
     </main>
   );
 }
