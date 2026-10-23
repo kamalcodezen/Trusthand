@@ -1,4 +1,5 @@
 
+import FaqSection from "@/components/homepage/FaqSection";
 import FooterCta from "@/components/homepage/FooterCta";
 import Hero from "@/components/homepage/Hero";
 import MarketIntelligence from "@/components/homepage/MarketIntelligence";
@@ -19,6 +20,7 @@ export default function HomePage() {
       <TopArtisans />
       <MarketIntelligence />
       <WorkerCta />
+      <FaqSection />
       <FooterCta />
     </main>
   );
