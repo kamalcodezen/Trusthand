@@ -1,4 +1,5 @@
 
+import FooterCta from "@/components/homepage/FooterCta";
 import Hero from "@/components/homepage/Hero";
 import MarketIntelligence from "@/components/homepage/MarketIntelligence";
 import Process from "@/components/homepage/Process";
@@ -18,6 +19,7 @@ export default function HomePage() {
       <TopArtisans />
       <MarketIntelligence />
       <WorkerCta />
+      <FooterCta />
     </main>
   );
 }
