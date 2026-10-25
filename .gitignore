@@ -2,8 +2,6 @@
 node_modules/
 
 # Environment secrets
-.env
-.env.*
 !.env.example
 
 # Build output
@@ -19,7 +17,7 @@ npm-debug.log*
 # OS and editor files
 .DS_Store
 Thumbs.db
-.vscode/
 
 # Test coverage
 coverage/
+config.bat
