@@ -8,6 +8,7 @@ import Sidebar, { FilterState } from "@/components/FindWorkers/Sidebar";
 import FilterHeader from "@/components/FindWorkers/FilterHeader";
 import Pagination from "@/components/FindWorkers/Pagination";
 import Card, { WorkerData } from "@/components/FindWorkers/Card";
+import JobRequestCTA from "@/components/FindWorkers/JobRequestCTA";
 
 // Each mock worker must have a unique ID
 const mockWorkersData: WorkerData[] = [
@@ -139,7 +140,7 @@ const mockWorkersData: WorkerData[] = [
     },
 ];
 
-const ITEMS_PER_PAGE = 3;
+const ITEMS_PER_PAGE = 6;
 
 export default function FindWorkersPage() {
     const [searchQuery, setSearchQuery] = useState("");
@@ -329,67 +330,74 @@ export default function FindWorkersPage() {
 
             {/* Main Container */}
             <div className="pb-16 px-4 sm:px-6 lg:px-10">
-                <div className="mx-auto w-full global-pos grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8">
-                    {/* Dynamic Sidebar */}
-                    <Sidebar
-                        filters={filters}
-                        setFilters={(newFilters) => {
-                            setFilters(newFilters);
-                            setCurrentPage(1);
-                        }}
-                        onReset={handleResetFilters}
-                        workers={mockWorkersData}
-                    />
-
-                    {/* Cards & Controls */}
-                    <div>
-                        <FilterHeader
-                            totalCount={filteredWorkers.length}
-                            activeTradeFilters={filters.trades}
-                            activeZone={filters.zone}
-                            sortBy={sortBy}
-                            setSortBy={setSortBy}
-                            removeTradeFilter={(trade) => {
-                                setFilters((prev) => ({
-                                    ...prev,
-                                    trades: prev.trades.filter((t) => t !== trade),
-                                }));
+                <div className="mx-auto w-full global-pos">
+                    <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8">
+                        {/* Dynamic Sidebar */}
+                        <Sidebar
+                            filters={filters}
+                            setFilters={(newFilters) => {
+                                setFilters(newFilters);
                                 setCurrentPage(1);
                             }}
-                            resetZoneFilter={() => {
-                                setFilters((prev) => ({ ...prev, zone: "All Zones" }));
-                                setCurrentPage(1);
-                            }}
-                            clearAll={handleResetFilters}
+                            onReset={handleResetFilters}
+                            workers={mockWorkersData}
                         />
 
-                        {paginatedWorkers.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mt-6">
-                                {paginatedWorkers.map((worker) => (
-                                    <Card key={worker.id} worker={worker} />
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="mt-8 rounded-2xl border border-[var(--color-trust-border)] bg-white p-12 text-center">
-                                <p className="text-sm font-bold text-[var(--color-trust-text-main)]">
-                                    No technicians found matching your filters.
-                                </p>
-                                <button
-                                    onClick={handleResetFilters}
-                                    className="mt-3 text-xs font-extrabold text-[var(--color-trust-green-main)] hover:underline"
-                                >
-                                    Reset all filters
-                                </button>
-                            </div>
-                        )}
+                        {/* Cards & Controls */}
+                        <div>
+                            <FilterHeader
+                                totalCount={filteredWorkers.length}
+                                activeTradeFilters={filters.trades}
+                                activeZone={filters.zone}
+                                sortBy={sortBy}
+                                setSortBy={setSortBy}
+                                removeTradeFilter={(trade) => {
+                                    setFilters((prev) => ({
+                                        ...prev,
+                                        trades: prev.trades.filter((t) => t !== trade),
+                                    }));
+                                    setCurrentPage(1);
+                                }}
+                                resetZoneFilter={() => {
+                                    setFilters((prev) => ({ ...prev, zone: "All Zones" }));
+                                    setCurrentPage(1);
+                                }}
+                                clearAll={handleResetFilters}
+                            />
 
-                        <Pagination
-                            currentPage={currentPage}
-                            totalPages={totalPages}
-                            totalItems={filteredWorkers.length}
-                            itemsPerPage={ITEMS_PER_PAGE}
-                            onPageChange={(page) => setCurrentPage(page)}
-                        />
+                            {paginatedWorkers.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mt-6">
+                                    {paginatedWorkers.map((worker) => (
+                                        <Card key={worker.id} worker={worker} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="mt-8 rounded-2xl border border-[var(--color-trust-border)] bg-white p-12 text-center">
+                                    <p className="text-sm font-bold text-[var(--color-trust-text-main)]">
+                                        No technicians found matching your filters.
+                                    </p>
+                                    <button
+                                        onClick={handleResetFilters}
+                                        className="mt-3 text-xs font-extrabold text-[var(--color-trust-green-main)] hover:underline"
+                                    >
+                                        Reset all filters
+                                    </button>
+                                </div>
+                            )}
+
+                            <Pagination
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                totalItems={filteredWorkers.length}
+                                itemsPerPage={ITEMS_PER_PAGE}
+                                onPageChange={(page) => setCurrentPage(page)}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Job Request CTA Banner placed inside global-pos */}
+                    <div className="mt-10">
+                        <JobRequestCTA />
                     </div>
                 </div>
             </div>
