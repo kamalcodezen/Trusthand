@@ -2,6 +2,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { Star, CheckCircle2 } from "lucide-react";
 
+export interface ServiceItem {
+  title: string;
+  badge: string;
+  description: string;
+  price: string;
+  priceSub: string;
+}
+
 export interface WorkerData {
   id: string;
   name: string;
@@ -15,6 +23,7 @@ export interface WorkerData {
   completedJobs: number;
   diagnosticFee: number;
   verificationBadge: string;
+  services?: ServiceItem[]; // ডাইনামিক সার্ভিসের জন্য
 }
 
 export default function Card({ worker }: { worker: WorkerData }) {
@@ -52,7 +61,7 @@ export default function Card({ worker }: { worker: WorkerData }) {
           </div>
 
           <p className="text-xs text-[var(--color-trust-text-muted)] mt-0.5">
-            {worker.role} • {worker.experience}
+            {worker.role} · {worker.experience}
           </p>
           <p className="text-[11px] text-[var(--color-trust-text-subtle)] flex items-center gap-1 mt-1">
             {worker.location}
@@ -85,12 +94,12 @@ export default function Card({ worker }: { worker: WorkerData }) {
 
         <div className="grid grid-cols-2 gap-2">
           <Link
-            href={`/workers/${worker.id}`}
+            href={`/find-workers/${worker.id}`}
             className="rounded-xl border border-[var(--color-trust-border)] py-2 text-center text-xs font-bold text-[var(--color-trust-text-main)] transition-colors hover:bg-[var(--color-trust-bg-light)]"
           >
             View Profile
           </Link>
-          <button className="rounded-xl bg-[var(--color-trust-green-main)] py-2 text-center text-xs font-bold text-white transition-colors hover:bg-[var(--color-trust-green-dark)]">
+          <button className="rounded-xl bg-[var(--color-trust-green-main)] py-2 text-center text-xs font-bold text-white transition-colors hover:bg-[var(--color-trust-green-dark)] cursor-pointer">
             Quote →
           </button>
         </div>
