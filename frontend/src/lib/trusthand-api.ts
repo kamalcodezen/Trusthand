@@ -1,7 +1,6 @@
 
 const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:5000"
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
 ).replace(/\/+$/, "");
 
 export type LocationOption = {
@@ -9,10 +8,7 @@ export type LocationOption = {
   bnName: string;
 };
 
-export type UserRole =
-  | "customer"
-  | "worker"
-  | "admin";
+export type UserRole = "customer" | "worker" | "admin";
 
 export type AuthResponse = {
   token: string;
@@ -58,44 +54,28 @@ export async function apiJson<T>(
     );
   }
 
-  const payload = (
-    await response.json().catch(() => null)
-  ) as ApiEnvelope<T> | null;
+  const payload = (await response.json().catch(() => null)) as
+    | ApiEnvelope<T>
+    | null;
 
-  if (
-    !response.ok ||
-    payload?.success === false
-  ) {
+  if (!response.ok || payload?.success === false) {
     throw new Error(
-      payload?.message ||
-      `Server returned HTTP ${response.status}.`
+      payload?.message || `Server returned HTTP ${response.status}.`
     );
   }
 
   if (!payload || payload.data === undefined) {
-    throw new Error(
-      "Unexpected response from the TrustHand backend."
-    );
+    throw new Error("Unexpected response from the TrustHand backend.");
   }
 
   return payload.data;
 }
 
 // Temporary MVP authentication storage.
-// Use secure HttpOnly cookie sessions for production.
-export function saveAuth({
-  token,
-  user,
-}: AuthResponse): void {
-  sessionStorage.setItem(
-    "trusthand_token",
-    token
-  );
-
-  sessionStorage.setItem(
-    "trusthand_user",
-    JSON.stringify(user)
-  );
+// Replace with secure HttpOnly cookie sessions for production.
+export function saveAuth({ token, user }: AuthResponse): void {
+  sessionStorage.setItem("trusthand_token", token);
+  sessionStorage.setItem("trusthand_user", JSON.stringify(user));
 }
 
 export function getAuthToken(): string | null {
@@ -105,11 +85,6 @@ export function getAuthToken(): string | null {
 }
 
 export function clearAuth(): void {
-  sessionStorage.removeItem(
-    "trusthand_token"
-  );
-
-  sessionStorage.removeItem(
-    "trusthand_user"
-  );
+  sessionStorage.removeItem("trusthand_token");
+  sessionStorage.removeItem("trusthand_user");
 }
