@@ -6,7 +6,7 @@ import morgan from "morgan";
 import { rateLimit } from "express-rate-limit";
 import { env } from "./config/env.js";
 import mongoose from "mongoose";
-
+import aiRoutes from "./api/ai.routes.js";
 import authRoutes from "./api/auth.routes.js";
 import locationRoutes from "./api/locations.routes.js";
 import userRoutes from "./api/users.routes.js";
@@ -75,6 +75,7 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
