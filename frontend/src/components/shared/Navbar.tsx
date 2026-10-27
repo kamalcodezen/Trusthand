@@ -23,6 +23,7 @@ import {
 const mainLinks = [
     { label: "Home", href: "/" },
     { label: "Services", href: "/services" },
+    { label: "Find Workers", href: "/find-workers" },
     { label: "How It Works", href: "/#how-it-works" },
     { label: "Trust & Safety", href: "/#trust-safety" },
     { label: "Pricing Guide", href: "/pricing-guide" },
