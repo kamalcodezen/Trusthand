@@ -1,9 +1,14 @@
-const AdminDashboardLayout = () => {
-  return (
-    <div>
-      <h2>Admin Dashboard Layout</h2>
-    </div>
-  );
-};
+import type { ReactNode } from "react";
+import DashboardShell from "@/components/dashboard/DashboardShell";
 
-export default AdminDashboardLayout;
+export default function Layout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return (
+    <DashboardShell role="admin">
+      {children}
+    </DashboardShell>
+  );
+}

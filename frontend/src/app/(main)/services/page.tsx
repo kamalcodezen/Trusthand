@@ -1,9 +1,5 @@
-const ServicesPage = () => {
-  return (
-    <>
-      <h2>Services</h2>
-    </>
-  );
-};
+import PublicPages from "@/components/public/PublicPages";
 
-export default ServicesPage;
+export default function Page() {
+  return <PublicPages topic="services" />;
+}

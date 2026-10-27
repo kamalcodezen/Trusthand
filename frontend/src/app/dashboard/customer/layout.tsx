@@ -1,9 +1,14 @@
-const CustomerDashboardLayout = () => {
-  return (
-    <div>
-      <h2>Customer Dashboard Layout</h2>
-    </div>
-  );
-};
+import type { ReactNode } from "react";
+import DashboardShell from "@/components/dashboard/DashboardShell";
 
-export default CustomerDashboardLayout;
+export default function Layout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return (
+    <DashboardShell role="customer">
+      {children}
+    </DashboardShell>
+  );
+}
