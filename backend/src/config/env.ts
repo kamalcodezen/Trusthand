@@ -1,30 +1,40 @@
 import "dotenv/config";
 import { z } from "zod";
 
-const envSchema = z.object({
-  NODE_ENV: z
-    .enum(["development", "production", "test"])
-    .default("development"),
+const schema = z.object({
+  NODE_ENV: z.enum([
+    "development",
+    "production",
+    "test"
+  ]).default("development"),
 
-  PORT: z.coerce.number().int().min(1).max(65535).default(5000),
+  PORT: z.coerce.number()
+    .int()
+    .min(1)
+    .max(65535)
+    .default(5000),
 
-  FRONTEND_URL: z.string().url(),
-
-  BETTER_AUTH_URL: z.string().url(),
-
-  BETTER_AUTH_SECRET: z.string().min(32),
+  FRONTEND_URL: z.string()
+    .url()
+    .default("http://localhost:3000"),
 
   MONGODB_URI: z.string().min(1),
 
-  MONGODB_DATABASE: z.string().min(1).default("trusthand"),
+  MONGODB_DATABASE: z.string()
+    .default("trusthand"),
+
+  JWT_SECRET: z.string().min(32)
 });
 
-const result = envSchema.safeParse(process.env);
+const result = schema.safeParse(process.env);
 
 if (!result.success) {
-  console.error("Invalid environment configuration:");
-  console.error(result.error.flatten().fieldErrors);
-  throw new Error("Environment validation failed");
+  console.error(
+    "Invalid backend .env:",
+    result.error.flatten().fieldErrors
+  );
+
+  throw new Error("Check backend/.env");
 }
 
 export const env = result.data;
