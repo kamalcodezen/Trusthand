@@ -1,19 +1,18 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "TrustHand full API with MongoDB, roles and Bangladesh geo selectors",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "seed": "tsx src/scripts/seed.ts",
+    "seed:locations": "tsx src/scripts/seed-locations.ts",
+    "admin:create": "tsx src/scripts/create-admin.ts",
+    "smoke": "tsx src/scripts/smoke.ts"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
   "dependencies": {
     "@better-auth/mongo-adapter": "^1.7.12",
     "better-auth": "^1.7.12",
