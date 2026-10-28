@@ -1,98 +1,139 @@
-import { CheckCircle2, AlertCircle } from "lucide-react";
+
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { apiJson } from "@/lib/trusthand-api";
+import type { Service } from "@/lib/dashboard-api";
 
 export default function MarketIntelligence() {
+  const [services, setServices] = useState<Service[]>([]);
+  const [selected, setSelected] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    apiJson<Service[]>("/api/services")
+      .then((items) => {
+        if (!active) return;
+
+        setServices(items);
+        if (items.length) setSelected(items[0]._id);
+      })
+      .catch((err: unknown) => {
+        if (active) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Pricing data could not be loaded."
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const service = services.find(
+    (item) => item._id === selected
+  );
+
   return (
-    <section className="bg-[#FAF9F5] px-4 py-16 sm:px-6 lg:px-10">
-      <div className="mx-auto w-full global-pos">
-        <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
-          
-          {/* Left Side Content */}
-          <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#245B46] sm:text-xs mb-3">
-              Market Intelligence
+    <section className="bg-[#FAF9F5] px-5 py-16">
+      <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-center">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-[#245B46]">
+            Pricing guidance
+          </p>
+
+          <h2 className="mt-3 text-3xl font-extrabold text-[#1B2A23]">
+            Understand the starting price.
+          </h2>
+
+          <p className="mt-4 text-sm leading-7 text-gray-600">
+            Browse current starting prices from the
+            TrustHand service catalog. These are indicative
+            base prices, not final worker quotations or
+            calculated neighborhood market averages.
+          </p>
+        </div>
+
+        <div className="rounded-3xl border bg-white p-7 shadow-sm">
+          {loading && (
+            <p role="status">Loading current catalog...</p>
+          )}
+
+          {error && (
+            <p role="alert" className="text-red-700">
+              {error}
             </p>
+          )}
 
-            <h2 className="text-3xl font-extrabold tracking-tight text-[#1B2A23] sm:text-4xl leading-tight">
-              A little clarity before you choose.
-            </h2>
-
-            <p className="mt-4 text-sm leading-relaxed text-[#7F8B84] sm:text-base">
-              No more uncertainty about whether you are being overcharged. TrustHand analyzes recent completed jobs in your neighborhood to provide expected diagnostic and labor envelopes.
+          {!loading && !error && !service && (
+            <p>
+              No active pricing records are available.
+              Configure the service catalog first.
             </p>
+          )}
 
-            {/* Transparent Advisory Box */}
-            <div className="mt-6 rounded-2xl border border-[#E6E7E3] bg-white p-5 shadow-sm">
-              <h4 className="text-xs font-bold text-[#1B2A23] uppercase tracking-wider mb-2">
-                Transparent Advisory:
-              </h4>
-              <p className="text-xs leading-relaxed text-[#7F8B84]">
-                All matrix estimates are based on recent Dhaka neighborhood tickets. Final quotations depend on required genuine parts, copper pipe runs, and height access.
+          {service && (
+            <>
+              <label className="block text-sm font-semibold">
+                Select a service
+                <select
+                  className="mt-2 w-full rounded-xl border p-3"
+                  value={selected}
+                  onChange={(event) =>
+                    setSelected(event.target.value)
+                  }
+                >
+                  {services.map((item) => (
+                    <option
+                      key={item._id}
+                      value={item._id}
+                    >
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="mt-6 rounded-2xl bg-[#184C3B] p-6 text-white">
+                <p className="text-xs uppercase tracking-wider text-[#B8D4C6]">
+                  Catalog starting price
+                </p>
+
+                <p className="mt-2 text-3xl font-extrabold">
+                  {service.basePrice > 0
+                    ? `৳${service.basePrice.toLocaleString("en-BD")}`
+                    : "Quotation required"}
+                </p>
+
+                <p className="mt-2 text-xs text-[#D1E5DA]">
+                  {service.name}
+                </p>
+              </div>
+
+              <p className="mt-4 text-sm leading-6 text-gray-600">
+                Final price depends on the worker's
+                quotation and the customer's acceptance.
+                No payment is charged by this preview.
               </p>
-            </div>
-          </div>
 
-          {/* Right Side Interactive/Preview Card */}
-          <div className="rounded-[28px] border border-[#E6E7E3] bg-white p-6 shadow-sm sm:p-8">
-            {/* Card Top Header */}
-            <div className="flex items-center justify-between pb-6 border-b border-[#ECEDE8]">
-              <div className="flex items-center gap-2">
-                <span className="size-2 rounded-full bg-[#245B46] animate-pulse" />
-                <span className="text-xs font-bold text-[#1B2A23]">Live Benchmark Preview</span>
-              </div>
-              <span className="rounded-full bg-[#E5EFE6] px-3 py-1 text-[11px] font-bold text-[#245B46]">
-                Banani: 28 completed jobs
-              </span>
-            </div>
-
-            {/* Service & Location Grid */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 my-6">
-              <div className="rounded-xl bg-[#FAF9F5] p-4">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#7F8B84]">Service</span>
-                <p className="mt-1 text-sm font-bold text-[#1B2A23]">Inverter AC Master Jet Wash</p>
-                <p className="text-xs text-[#9BA8A0] mt-0.5">Split 1.5 - 2.0 Ton</p>
-              </div>
-
-              <div className="rounded-xl bg-[#FAF9F5] p-4">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#7F8B84]">Location Zone</span>
-                <p className="mt-1 text-sm font-bold text-[#1B2A23]">Banani (Roads 1-27)</p>
-                <p className="text-xs text-[#9BA8A0] mt-0.5">Residential apartments</p>
-              </div>
-            </div>
-
-            {/* Indicative Price Banner */}
-            <div className="rounded-2xl bg-[#184C3B] p-5 text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#A3C1B4]">
-                  Indicative Labor & Diagnostic
-                </span>
-                <div className="mt-1 text-2xl font-black tracking-tight">
-                  ৳1,400 – ৳1,800
-                </div>
-              </div>
-              <div className="sm:text-right border-t sm:border-t-0 sm:border-l border-[#2F6854] pt-3 sm:pt-0 sm:pl-4">
-                <span className="text-xs font-bold block text-white">Full Jet Wash Included</span>
-                <span className="text-[11px] text-[#A3C1B4]">Typical duration: ~90 mins</span>
-              </div>
-            </div>
-
-            {/* Feature List Items */}
-            <div className="mt-6 space-y-3">
-              <div className="flex items-center gap-2.5 text-xs font-medium text-[#526159]">
-                <CheckCircle2 size={15} className="shrink-0 text-[#245B46]" />
-                <span>Includes indoor coil high-pressure wash with protective catchment bag</span>
-              </div>
-              <div className="flex items-center gap-2.5 text-xs font-medium text-[#526159]">
-                <CheckCircle2 size={15} className="shrink-0 text-[#245B46]" />
-                <span>Outdoor condenser fin cleaning &amp; compressor amp draw testing</span>
-              </div>
-              <div className="flex items-center gap-2.5 text-xs font-medium text-[#7F8B84] pt-2 border-t border-[#ECEDE8]">
-                <AlertCircle size={15} className="shrink-0 text-amber-500" />
-                <span className="text-[11px]">Freon R32 / R410 refrigerant refill quoted separately if copper leak detected</span>
-              </div>
-            </div>
-
-          </div>
-
+              <Link
+                href={`/find-workers?service=${service._id}`}
+                className="mt-5 inline-block rounded-xl bg-[#245B46] px-5 py-3 text-sm font-bold text-white"
+              >
+                Find professionals
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </section>
