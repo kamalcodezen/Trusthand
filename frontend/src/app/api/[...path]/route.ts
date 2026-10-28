@@ -1,8 +1,5 @@
 
-import {
-  NextRequest,
-  NextResponse,
-} from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,12 +40,17 @@ async function handler(
     request.method !== "GET" &&
     request.method !== "HEAD";
 
-  // Only requests from the application origin
-  // may modify cookie-authenticated data.
+  // Validate against the actual public frontend origin.
+  // Render may expose an internal origin through its proxy.
+  const publicAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+  const expectedOrigin = publicAppUrl
+    ? new URL(publicAppUrl).origin
+    : request.nextUrl.origin;
+
   if (
     unsafe &&
-    request.headers.get("origin") !==
-      request.nextUrl.origin
+    request.headers.get("origin") !== expectedOrigin
   ) {
     return NextResponse.json(
       {
