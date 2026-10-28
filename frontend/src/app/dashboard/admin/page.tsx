@@ -1,9 +1,10 @@
-const AdminDashboardPage = () => {
-  return (
-    <div>
-      <h1>Admin Dashboard Page</h1>
-    </div>
-  );
-};
+import DashboardView from "@/components/dashboard/DashboardView";
 
-export default AdminDashboardPage;
+export default function Page() {
+  return (
+    <DashboardView
+      role="admin"
+      section="overview"
+    />
+  );
+}
