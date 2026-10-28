@@ -1,9 +1,25 @@
-const AdminDashboardLayout = () => {
-  return (
-    <div>
-      <h2>Admin Dashboard Layout</h2>
-    </div>
-  );
+// TrustHand SEO setup
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Admin Dashboard",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
-export default AdminDashboardLayout;
+import type { ReactNode } from "react";
+import DashboardShell from "@/components/dashboard/DashboardShell";
+
+export default function Layout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return (
+    <DashboardShell role="admin">
+      {children}
+    </DashboardShell>
+  );
+}
