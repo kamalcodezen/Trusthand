@@ -1,9 +1,26 @@
-const WorkerDashboardLayout = () => {
-  return (
-    <div>
-      <h2>Worker Dashboard Layout</h2>
-    </div>
-  );
+// TrustHand SEO setup
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Worker Dashboard",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
-export default WorkerDashboardLayout;
+
+import type { ReactNode } from "react";
+import DashboardShell from "@/components/dashboard/DashboardShell";
+
+export default function WorkerDashboardLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return (
+    <DashboardShell role="worker">
+      {children}
+    </DashboardShell>
+  );
+}
