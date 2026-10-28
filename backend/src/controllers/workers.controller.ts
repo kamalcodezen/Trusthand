@@ -43,8 +43,10 @@ const schema = z.object({
   upazila: z.string().trim().optional()
 }).strict();
 
+
 const publicFields =
-  "name area division district upazila bio experienceYears startingPrice services available verificationStatus createdAt";
+  "name area division district upazila bio experienceYears startingPrice services available verificationStatus isDemo createdAt";
+
 
 function escapeRegExp(value: string) {
   return value.replace(

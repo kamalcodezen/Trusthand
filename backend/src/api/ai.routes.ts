@@ -3,40 +3,21 @@ import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
 
-import {
-  body,
-  handle,
-  HttpError,
-} from "../utils/http.js";
-
-import {
-  requireAuth,
-  type Actor,
-} from "../middlewares/auth.js";
-
-import {
-  askAI,
-  type AssistantKind,
-} from "../services/ai.service.js";
-
-import {
-  buildAIContext,
-} from "../services/ai-context.js";
+import { body, handle, HttpError } from "../utils/http.js";
+import { requireAuth, type Actor } from "../middlewares/auth.js";
+import { askAI, type AssistantKind } from "../services/ai.service.js";
+import { buildAIContext } from "../services/ai-context.js";
 
 const router = Router();
 
 const schema = z.object({
   message: z.string().trim().min(2).max(1200),
-
-  history: z
-    .array(
-      z.object({
-        role: z.enum(["user", "assistant"]),
-        content: z.string().min(1).max(1200),
-      }).strict()
-    )
-    .max(6)
-    .default([]),
+  history: z.array(
+    z.object({
+      role: z.enum(["user", "assistant"]),
+      content: z.string().min(1).max(1200),
+    }).strict()
+  ).max(6).default([]),
 }).strict();
 
 const publicLimit = rateLimit({
@@ -51,23 +32,18 @@ const privateLimit = rateLimit({
   limit: 40,
   standardHeaders: "draft-8",
   legacyHeaders: false,
-
-  keyGenerator: (req) =>
-    String(req.res?.locals.actor?.id ?? req.ip),
+  keyGenerator: (_req, res) => {
+    const actor = res.locals.actor as Actor;
+    return `user:${actor.id}`;
+  },
 });
 
-// Public homepage assistant
 router.post(
   "/public",
   publicLimit,
   handle(async (req, res) => {
-    const { message, history } = body(
-      schema,
-      req.body
-    );
-
+    const { message, history } = body(schema, req.body);
     const context = await buildAIContext("public");
-
     const answer = await askAI(
       "public",
       message,
@@ -82,24 +58,19 @@ router.post(
   })
 );
 
-// Customer, worker and admin assistants
 router.post(
   "/:kind",
   requireAuth,
   privateLimit,
-
   handle(async (req, res) => {
     const actor = res.locals.actor as Actor;
     const kind = req.params.kind;
 
     if (
-      !kind ||
+      typeof kind !== "string" ||
       !["customer", "worker", "admin"].includes(kind)
     ) {
-      throw new HttpError(
-        404,
-        "Unknown assistant"
-      );
+      throw new HttpError(404, "Unknown assistant");
     }
 
     if (actor.role !== kind) {
@@ -109,10 +80,7 @@ router.post(
       );
     }
 
-    const { message, history } = body(
-      schema,
-      req.body
-    );
+    const { message, history } = body(schema, req.body);
 
     const context = await buildAIContext(
       kind as Actor["role"],

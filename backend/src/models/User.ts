@@ -1,20 +1,21 @@
+
 import mongoose, { Schema } from "mongoose";
 
 export const roles = [
   "customer",
   "worker",
-  "admin"
+  "admin",
 ] as const;
 
 export const accountStatus = [
   "active",
-  "suspended"
+  "suspended",
 ] as const;
 
 export const verification = [
   "pending",
   "approved",
-  "rejected"
+  "rejected",
 ] as const;
 
 const schema = new Schema(
@@ -23,7 +24,7 @@ const schema = new Schema(
       type: String,
       required: true,
       trim: true,
-      maxlength: 100
+      maxlength: 100,
     },
 
     email: {
@@ -31,104 +32,117 @@ const schema = new Schema(
       required: true,
       unique: true,
       lowercase: true,
-      trim: true
+      trim: true,
     },
 
     passwordHash: {
       type: String,
       required: true,
-      select: false
+      select: false,
     },
 
     phone: {
       type: String,
       trim: true,
       default: "",
-      maxlength: 30
+      maxlength: 30,
     },
 
     area: {
       type: String,
       trim: true,
       default: "",
-      maxlength: 120
+      maxlength: 120,
     },
 
     division: {
       type: String,
       trim: true,
-      default: ""
+      default: "",
     },
 
     district: {
       type: String,
       trim: true,
-      default: ""
+      default: "",
     },
 
     upazila: {
       type: String,
       trim: true,
-      default: ""
+      default: "",
     },
 
     role: {
       type: String,
       enum: roles,
-      default: "customer"
+      default: "customer",
     },
 
     status: {
       type: String,
       enum: accountStatus,
-      default: "active"
+      default: "active",
     },
 
     verificationStatus: {
       type: String,
       enum: verification,
-      default: "pending"
+      default: "pending",
     },
 
     bio: {
       type: String,
       default: "",
-      maxlength: 1000
+      maxlength: 1000,
     },
 
     experienceYears: {
       type: Number,
       default: 0,
       min: 0,
-      max: 70
+      max: 70,
     },
 
     startingPrice: {
       type: Number,
       default: 0,
-      min: 0
+      min: 0,
     },
 
     services: [
       {
         type: Schema.Types.ObjectId,
-        ref: "Service"
-      }
+        ref: "Service",
+      },
     ],
 
     available: {
       type: Boolean,
-      default: true
-    }
+      default: true,
+    },
+
+    isDemo: {
+      type: Boolean,
+      default: false,
+    },
+
+    sessionVersion: {
+      type: Number,
+      default: 0,
+      min: 0,
+      select: false,
+    },
   },
   {
     timestamps: true,
     toJSON: {
       transform(_doc, ret) {
-       Reflect.deleteProperty(ret, "passwordHash");
+        Reflect.deleteProperty(ret, "passwordHash");
+        Reflect.deleteProperty(ret, "sessionVersion");
         return ret;
-      }
-    }
+      },
+    },
   }
 );
 
@@ -137,7 +151,7 @@ schema.index({
   division: 1,
   district: 1,
   upazila: 1,
-  verificationStatus: 1
+  verificationStatus: 1,
 });
 
 export const User: mongoose.Model<any> =

@@ -1,8 +1,9 @@
+
 import {
   createHmac,
   randomBytes,
   scrypt as scryptCallback,
-  timingSafeEqual
+  timingSafeEqual,
 } from "node:crypto";
 
 import { promisify } from "node:util";
@@ -49,15 +50,18 @@ export async function verifyPassword(
   );
 }
 
+type Role = "customer" | "worker" | "admin";
+
 type Claims = {
   sub: string;
-  role: "customer" | "worker" | "admin";
+  role: Role;
+  sv: number;
   exp: number;
 };
 
-const b64 = (obj: unknown) =>
+const b64 = (value: unknown) =>
   Buffer.from(
-    JSON.stringify(obj)
+    JSON.stringify(value)
   ).toString("base64url");
 
 const mac = (data: string) =>
@@ -67,17 +71,19 @@ const mac = (data: string) =>
 
 export function issueToken(user: {
   id: string;
-  role: Claims["role"];
+  role: Role;
+  sessionVersion: number;
 }): string {
   const header = b64({
     alg: "HS256",
-    typ: "JWT"
+    typ: "JWT",
   });
 
   const payload = b64({
     sub: user.id,
     role: user.role,
-    exp: Math.floor(Date.now() / 1000) + 7 * 86400
+    sv: user.sessionVersion,
+    exp: Math.floor(Date.now() / 1000) + 7 * 86400,
   });
 
   const message = `${header}.${payload}`;
@@ -85,69 +91,64 @@ export function issueToken(user: {
   return `${message}.${mac(message)}`;
 }
 
-export function parseToken(
-  token: string
-): Claims {
+export function parseToken(token: string): Claims {
   const parts = token.split(".");
 
   if (parts.length !== 3) {
     throw new HttpError(401, "Invalid token");
   }
 
-  const [
-    header,
-    payload,
-    signature
-  ] = parts as [string, string, string];
+  const [header, payload, signature] = parts as [
+    string,
+    string,
+    string,
+  ];
 
   const expected = mac(`${header}.${payload}`);
 
-  const signatureBuffer = Buffer.from(signature);
+  const providedBuffer = Buffer.from(signature);
   const expectedBuffer = Buffer.from(expected);
 
   if (
-    signatureBuffer.length !== expectedBuffer.length ||
-    !timingSafeEqual(
-      signatureBuffer,
-      expectedBuffer
-    )
+    providedBuffer.length !== expectedBuffer.length ||
+    !timingSafeEqual(providedBuffer, expectedBuffer)
   ) {
     throw new HttpError(401, "Invalid token");
   }
 
-  let raw: any;
+  let raw: unknown;
 
   try {
     const h = JSON.parse(
-      Buffer.from(
-        header,
-        "base64url"
-      ).toString()
+      Buffer.from(header, "base64url").toString()
     );
 
-    if (
-      h.alg !== "HS256" ||
-      h.typ !== "JWT"
-    ) {
-      throw new Error("Invalid header");
+    if (h.alg !== "HS256" || h.typ !== "JWT") {
+      throw new Error("Invalid token header");
     }
 
     raw = JSON.parse(
-      Buffer.from(
-        payload,
-        "base64url"
-      ).toString()
+      Buffer.from(payload, "base64url").toString()
     );
   } catch {
     throw new HttpError(401, "Invalid token");
   }
 
+  if (!raw || typeof raw !== "object") {
+    throw new HttpError(401, "Invalid token");
+  }
+
+  const claims = raw as Partial<Claims>;
+
   if (
-    !raw ||
-    typeof raw.sub !== "string" ||
-    !["customer", "worker", "admin"].includes(raw.role) ||
-    !Number.isSafeInteger(raw.exp) ||
-    raw.exp <= Math.floor(Date.now() / 1000)
+    typeof claims.sub !== "string" ||
+    !["customer", "worker", "admin"].includes(
+      claims.role ?? ""
+    ) ||
+    !Number.isSafeInteger(claims.sv) ||
+    (claims.sv ?? -1) < 0 ||
+    !Number.isSafeInteger(claims.exp) ||
+    (claims.exp ?? 0) <= Math.floor(Date.now() / 1000)
   ) {
     throw new HttpError(
       401,
@@ -155,5 +156,5 @@ export function parseToken(
     );
   }
 
-  return raw as Claims;
+  return claims as Claims;
 }
