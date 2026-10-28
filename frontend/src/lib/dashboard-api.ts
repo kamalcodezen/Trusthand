@@ -25,6 +25,8 @@ export type Worker = {
   name: string;
   area?: string;
   district?: string;
+  division?: string;
+  upazila?: string;
   bio?: string;
   available?: boolean;
   experienceYears?: number;
@@ -48,6 +50,7 @@ export type Booking = {
   amount: number;
   address?: string;
   note?: string;
+  isDemo?: boolean;
 };
 
 export type Payment = {
@@ -59,6 +62,7 @@ export type Payment = {
   platformFee: number;
   status: string;
   paidAt?: string;
+  isDemo?: boolean;
 };
 
 export type Person = {
@@ -69,6 +73,7 @@ export type Person = {
   verificationStatus?: string;
   district?: string;
   joinedAt?: string;
+  isDemo?: boolean;
 };
 
 export type Profile = {
@@ -84,10 +89,16 @@ export type Profile = {
   services?: Service[];
   verificationStatus?: string;
   district?: string;
+  division?: string;
   upazila?: string;
+  isDemo?: boolean;
 };
 
-export type Overview = {
+// ============================
+// ADMIN OVERVIEW STATISTICS
+// ============================
+
+export type OverviewStats = {
   customers: number;
   workers: number;
   bookings: number;
@@ -97,6 +108,17 @@ export type Overview = {
   pendingVerifications: number;
   earnedFees: number;
   grossPayments: number;
+};
+
+// ============================
+// ADMIN OVERVIEW RESPONSE
+// ============================
+
+export type Overview = OverviewStats & {
+  isSample: boolean;
+
+  real: OverviewStats;
+  demo: OverviewStats;
 
   recentBookings: Array<{
     id: string;
@@ -105,8 +127,17 @@ export type Overview = {
     worker: string;
     scheduledAt: string;
     status: string;
+    amount: number;
+    isDemo: boolean;
   }>;
+
+  newWorkers?: Person[];
+  limitedTo?: number;
 };
+
+// ============================
+// API REQUEST HELPERS
+// ============================
 
 export function apiAuth<T>(
   path: string,
@@ -135,6 +166,10 @@ export const putJSON = (
   method: "PUT",
   body: JSON.stringify(payload),
 });
+
+// ============================
+// DISPLAY HELPERS
+// ============================
 
 export function displayName(
   value: IDObject | string | undefined

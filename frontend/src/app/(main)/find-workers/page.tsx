@@ -49,9 +49,6 @@ function Directory() {
   useEffect(() => {
     let active = true;
 
-    setLoading(true);
-    setError("");
-
     const qs = new URLSearchParams();
 
     if (service) {
@@ -67,6 +64,11 @@ function Directory() {
     }
 
     const timer = setTimeout(() => {
+      if (!active) return;
+
+      setLoading(true);
+      setError("");
+
       apiJson<Worker[]>(
         `/api/workers?${qs}`
       )
@@ -97,12 +99,11 @@ function Directory() {
     <main className="min-h-[65vh] bg-[#f7faf8] px-5 py-14 text-[#183e30]">
       <div className="mx-auto max-w-6xl">
         <h1 className="text-4xl font-extrabold">
-          Find verified workers
+          Find local workers
         </h1>
 
         <p className="mt-3 text-sm text-gray-600">
-          Showing active, admin-approved workers
-          from the database — not sample profiles.
+          Browse admin-approved database profiles. Demo workers are clearly labeled and are not identity-verified.
         </p>
 
         <div className="my-8 grid gap-3 rounded-2xl bg-white p-5 shadow-sm sm:grid-cols-3">
@@ -180,7 +181,7 @@ function Directory() {
             >
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-xs font-bold text-[#1c7046]">
-                  Admin-approved
+                  {w.isDemo ? "DEMO PROFILE — Not verified" : "Admin-approved profile"}
                 </span>
 
                 <span className="text-xs text-gray-500">

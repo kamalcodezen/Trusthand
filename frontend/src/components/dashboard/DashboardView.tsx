@@ -70,6 +70,7 @@ type AdminPayment = {
   platformFee: number;
   status: string;
   paidAt?: string;
+  isDemo?: boolean;
 };
 
 type Settings = {
@@ -117,8 +118,8 @@ export default function DashboardView({
   const [selectedServices, setSelectedServices] =
     useState<string[]>([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loadedRequest, setLoadedRequest] =
+    useState("");
 
   const [busy, setBusy] =
     useState(false);
@@ -133,6 +134,14 @@ export default function DashboardView({
     useState(0);
 
   const valid = allowed[role].includes(section);
+
+  const requestKey = `${role}:${section}:${reload}`;
+
+  const loading =
+    valid &&
+    section !== "bookings" &&
+    section !== "ai" &&
+    loadedRequest !== requestKey;
 
   const setField = (
     key: string,
@@ -150,14 +159,10 @@ export default function DashboardView({
       section === "bookings" ||
       section === "ai"
     ) {
-      setLoading(false);
       return;
     }
 
     let active = true;
-
-    setLoading(true);
-    setError("");
 
     const read = async () => {
       if (role === "admin") {
@@ -291,6 +296,11 @@ export default function DashboardView({
     };
 
     void read()
+      .then(() => {
+        if (active) {
+          setError("");
+        }
+      })
       .catch((e) => {
         if (active) {
           setError(
@@ -302,14 +312,14 @@ export default function DashboardView({
       })
       .finally(() => {
         if (active) {
-          setLoading(false);
+          setLoadedRequest(requestKey);
         }
       });
 
     return () => {
       active = false;
     };
-  }, [role, section, valid, reload]);
+  }, [role, section, valid, reload, requestKey]);
 
   async function act(
     path: string,
@@ -408,37 +418,56 @@ export default function DashboardView({
         role === "admin" &&
         overview && (
           <>
+            {overview.isSample && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                <p className="font-bold">
+                  Demo data is present
+                </p>
+                <p className="mt-1">
+                  Dashboard totals include demo records.
+                  Real and demo figures are shown
+                  separately below. Recorded fees are
+                  bookkeeping entries, not proof of
+                  money transferred.
+                </p>
+              </div>
+            )}
+
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {([
-                ["Customers", overview.customers],
-                ["Workers", overview.workers],
-                ["Bookings", overview.bookings],
-                ["Open bookings", overview.activeBookings],
-                [
-                  "Pending worker reviews",
-                  overview.pendingVerifications,
-                ],
-                [
-                  "Approved workers",
-                  overview.approvedWorkers,
-                ],
-                [
-                  "Completed jobs",
-                  overview.completedBookings,
-                ],
-                [
-                  "Recorded fees (BDT)",
-                  overview.earnedFees,
-                ],
-              ] as const).map(([name, count]) => (
-                <div className={panel} key={name}>
+                ["Customers", "customers"],
+                ["Workers", "workers"],
+                ["Bookings", "bookings"],
+                ["Open bookings", "activeBookings"],
+                ["Pending worker reviews", "pendingVerifications"],
+                ["Approved workers", "approvedWorkers"],
+                ["Completed jobs", "completedBookings"],
+                ["Recorded fees (BDT)", "earnedFees"],
+              ] as const).map(([title, key]) => (
+                <div className={panel} key={key}>
                   <p className="text-sm text-gray-500">
-                    {name}
+                    {title}
                   </p>
 
                   <p className="mt-2 text-3xl font-bold">
-                    {count}
+                    {overview[key].toLocaleString("en-BD")}
                   </p>
+
+                  <div className="mt-3 border-t pt-3 text-xs text-gray-600">
+                    <p>
+                      Real:{" "}
+                      <b>
+                        {overview.real[key].toLocaleString("en-BD")}
+                      </b>
+                    </p>
+
+                    <p className="mt-1">
+                      Demo:{" "}
+                      <b>
+                        {overview.demo[key].toLocaleString("en-BD")}
+                      </b>
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -455,6 +484,12 @@ export default function DashboardView({
                 >
                   {b.service} — {b.customer} /
                   {b.worker} — <b>{b.status}</b>
+
+                  {b.isDemo && (
+                    <span className="ml-2 rounded bg-amber-100 px-2 py-1 text-xs font-bold text-amber-800">
+                      DEMO
+                    </span>
+                  )}
                 </p>
               ))}
 
@@ -592,6 +627,12 @@ export default function DashboardView({
                     </b>
                     {" · "}
                     {value.status}
+
+                    {role === "admin" && value.isDemo && (
+                      <span className="ml-2 rounded bg-amber-100 px-2 py-1 text-xs font-bold text-amber-800">
+                        DEMO RECORD
+                      </span>
+                    )}
 
                     <p className="text-xs text-gray-500">
                       {role === "admin"
@@ -1009,6 +1050,12 @@ export default function DashboardView({
               >
                 <div>
                   <b>{p.name}</b>
+
+                  {p.isDemo && (
+                    <span className="ml-2 rounded bg-amber-100 px-2 py-1 text-xs font-bold text-amber-800">
+                      DEMO
+                    </span>
+                  )}
                   {" ("}
                   {p.email}
                   {")"}

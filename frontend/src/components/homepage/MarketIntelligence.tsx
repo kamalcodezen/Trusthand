@@ -121,8 +121,8 @@ export default function MarketIntelligence() {
               </div>
 
               <p className="mt-4 text-sm leading-6 text-gray-600">
-                Final price depends on the worker's
-                quotation and the customer's acceptance.
+                Final price depends on the worker&apos;s
+                quotation and the customer&apos;s acceptance.
                 No payment is charged by this preview.
               </p>
 
