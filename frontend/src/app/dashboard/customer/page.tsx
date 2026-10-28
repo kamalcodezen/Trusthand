@@ -1,9 +1,10 @@
-const CustomerDashboardPage = () => {
-  return (
-    <div>
-      <h1>Customer Dashboard Page</h1>
-    </div>
-  );
-};
+import DashboardView from "@/components/dashboard/DashboardView";
 
-export default CustomerDashboardPage;
+export default function Page() {
+  return (
+    <DashboardView
+      role="customer"
+      section="overview"
+    />
+  );
+}
