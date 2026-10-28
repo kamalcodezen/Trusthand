@@ -1,3 +1,4 @@
+
 import { Router } from "express";
 
 import {
@@ -5,12 +6,14 @@ import {
   listBookings,
   getBooking,
   updateBookingStatus,
-  deleteBooking
+  deleteBooking,
+  sendQuote,
+  respondQuote,
 } from "../controllers/bookings.controller.js";
 
 import {
   requireAuth,
-  roles
+  roles,
 } from "../middlewares/auth.js";
 
 import { handle } from "../utils/http.js";
@@ -19,6 +22,11 @@ const router = Router();
 
 router.use(requireAuth);
 
+router.get(
+  "/",
+  handle(listBookings)
+);
+
 router.post(
   "/",
   roles("customer"),
@@ -26,13 +34,20 @@ router.post(
 );
 
 router.get(
-  "/",
-  handle(listBookings)
-);
-
-router.get(
   "/:id",
   handle(getBooking)
+);
+
+router.post(
+  "/:id/quote",
+  roles("worker"),
+  handle(sendQuote)
+);
+
+router.post(
+  "/:id/quote/respond",
+  roles("customer"),
+  handle(respondQuote)
 );
 
 router.patch(

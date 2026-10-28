@@ -1,24 +1,24 @@
+
 import type { RequestHandler } from "express";
 import { z } from "zod";
 
 import { User } from "../models/User.js";
 import { Booking } from "../models/Booking.js";
 import { Payment } from "../models/Payment.js";
-
 import {
   getSettings,
-  Settings
+  Settings,
 } from "../models/Settings.js";
 
 import {
   body,
   id,
   HttpError,
-  dateString
+  dateString,
 } from "../utils/http.js";
 
 import {
-  updateBookingStatus
+  updateBookingStatus,
 } from "./bookings.controller.js";
 
 const mode = "mongo";
@@ -35,7 +35,7 @@ const formatUser = (v: any) => ({
   role: v.role,
   status: v.status,
   verificationStatus: v.verificationStatus,
-  joinedAt: dateString(v.createdAt)
+  joinedAt: dateString(v.createdAt),
 });
 
 const formatBooking = (v: any) => ({
@@ -45,7 +45,7 @@ const formatBooking = (v: any) => ({
   worker: v.worker?.name ?? "Unknown",
   scheduledAt: dateString(v.scheduledAt),
   amount: v.amount,
-  status: v.status
+  status: v.status,
 });
 
 const formatPayment = (v: any) => ({
@@ -57,28 +57,28 @@ const formatPayment = (v: any) => ({
   amount: v.amount,
   platformFee: v.platformFee,
   status: v.status,
-  paidAt: dateString(v.paidAt)
+  paidAt: dateString(v.paidAt),
 });
 
 const includeBooking = [
   {
     path: "service",
-    select: "name"
+    select: "name",
   },
   {
     path: "customer",
-    select: "name"
+    select: "name",
   },
   {
     path: "worker",
-    select: "name"
-  }
+    select: "name",
+  },
 ];
 
 export const listUsers: RequestHandler =
   async (_req, res) => {
     const users = await User.find({
-      role: "customer"
+      role: "customer",
     })
       .sort({ createdAt: -1 })
       .limit(200)
@@ -86,14 +86,14 @@ export const listUsers: RequestHandler =
 
     res.json({
       data: users.map(formatUser),
-      mode
+      mode,
     });
   };
 
 export const listWorkersAdmin: RequestHandler =
   async (_req, res) => {
     const users = await User.find({
-      role: "worker"
+      role: "worker",
     })
       .sort({ createdAt: -1 })
       .limit(200)
@@ -101,7 +101,7 @@ export const listWorkersAdmin: RequestHandler =
 
     res.json({
       data: users.map(formatUser),
-      mode
+      mode,
     });
   };
 
@@ -115,7 +115,7 @@ export const listBookingsAdmin: RequestHandler =
 
     res.json({
       data: items.map(formatBooking),
-      mode
+      mode,
     });
   };
 
@@ -129,7 +129,7 @@ export const listPaymentsAdmin: RequestHandler =
 
     res.json({
       data: items.map(formatPayment),
-      mode
+      mode,
     });
   };
 
@@ -140,9 +140,9 @@ export const getAdminSettings: RequestHandler =
     res.json({
       data: {
         serviceFeePercent: item.serviceFeePercent,
-        supportEmail: item.supportEmail
+        supportEmail: item.supportEmail,
       },
-      mode
+      mode,
     });
   };
 
@@ -192,22 +192,23 @@ export const updateUserStatus: RequestHandler =
       z.object({
         status: z.enum([
           "active",
-          "suspended"
-        ])
+          "suspended",
+        ]),
       }).strict(),
-
       req.body
     );
 
     const user = await User.findOneAndUpdate(
       {
         _id: id(req.params.id),
-        role: "customer"
+        role: "customer",
       },
-
-      { $set: input },
-
-      { new: true }
+      {
+        $set: input,
+      },
+      {
+        new: true,
+      }
     );
 
     if (!user) {
@@ -218,7 +219,7 @@ export const updateUserStatus: RequestHandler =
     }
 
     res.json({
-      data: formatUser(user)
+      data: formatUser(user),
     });
   };
 
@@ -229,22 +230,23 @@ export const updateWorkerStatus: RequestHandler =
         verificationStatus: z.enum([
           "pending",
           "approved",
-          "rejected"
-        ])
+          "rejected",
+        ]),
       }).strict(),
-
       req.body
     );
 
     const user = await User.findOneAndUpdate(
       {
         _id: id(req.params.id),
-        role: "worker"
+        role: "worker",
       },
-
-      { $set: input },
-
-      { new: true }
+      {
+        $set: input,
+      },
+      {
+        new: true,
+      }
     );
 
     if (!user) {
@@ -255,7 +257,7 @@ export const updateWorkerStatus: RequestHandler =
     }
 
     res.json({
-      data: formatUser(user)
+      data: formatUser(user),
     });
   };
 
@@ -274,24 +276,24 @@ export const getOverview: RequestHandler =
       completedBookings,
       paidStats,
       recent,
-      newWorkers
+      newWorkers,
     ] = await Promise.all([
       User.countDocuments({
-        role: "customer"
-      }),
-
-      User.countDocuments({
-        role: "worker"
+        role: "customer",
       }),
 
       User.countDocuments({
         role: "worker",
-        verificationStatus: "pending"
       }),
 
       User.countDocuments({
         role: "worker",
-        verificationStatus: "approved"
+        verificationStatus: "pending",
+      }),
+
+      User.countDocuments({
+        role: "worker",
+        verificationStatus: "approved",
       }),
 
       Booking.countDocuments(),
@@ -300,33 +302,35 @@ export const getOverview: RequestHandler =
         status: {
           $in: [
             "pending",
+            "quoted",
             "confirmed",
-            "in_progress"
-          ]
-        }
+            "in_progress",
+            "awaiting_completion",
+          ],
+        },
       }),
 
       Booking.countDocuments({
-        status: "completed"
+        status: "completed",
       }),
 
       Payment.aggregate([
         {
           $match: {
-            status: "paid"
-          }
+            status: "paid",
+          },
         },
         {
           $group: {
             _id: null,
             grossPayments: {
-              $sum: "$amount"
+              $sum: "$amount",
             },
             earnedFees: {
-              $sum: "$platformFee"
-            }
-          }
-        }
+              $sum: "$platformFee",
+            },
+          },
+        },
       ]),
 
       Booking.find()
@@ -337,11 +341,11 @@ export const getOverview: RequestHandler =
 
       User.find({
         role: "worker",
-        verificationStatus: "pending"
+        verificationStatus: "pending",
       })
         .sort({ createdAt: -1 })
         .limit(4)
-        .lean()
+        .lean(),
     ]);
 
     res.json({
@@ -367,9 +371,8 @@ export const getOverview: RequestHandler =
           newWorkers.map(formatUser),
 
         isSample: false,
-        limitedTo: 200
+        limitedTo: 200,
       },
-
-      mode
+      mode,
     });
   };

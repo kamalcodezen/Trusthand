@@ -13,11 +13,7 @@ import {
 } from "next/navigation";
 
 import Link from "next/link";
-
-import {
-  apiJson,
-  getAuthToken,
-} from "@/lib/trusthand-api";
+import { apiJson } from "@/lib/trusthand-api";
 
 import {
   apiAuth,
@@ -64,13 +60,13 @@ export default function WorkerDetailPage() {
           w.services?.[0]?._id || ""
         );
       })
-      .catch((e) =>
+      .catch((e) => {
         setError(
           e instanceof Error
             ? e.message
             : "Unable to load worker"
-        )
-      );
+        );
+      });
   }, [id]);
 
   async function book(
@@ -79,14 +75,44 @@ export default function WorkerDetailPage() {
     e.preventDefault();
     setError("");
 
-    if (!getAuthToken()) {
-      router.push("/login");
+    if (
+      !serviceId ||
+      !address.trim() ||
+      !scheduledAt
+    ) {
+      setError(
+        "Choose service, address and preferred schedule."
+      );
+      return;
+    }
+
+    const date = new Date(scheduledAt);
+
+    if (
+      Number.isNaN(date.getTime()) ||
+      date.getTime() <
+        Date.now() + 15 * 60000
+    ) {
+      setError(
+        "Choose a schedule at least 15 minutes in the future."
+      );
       return;
     }
 
     setLoading(true);
 
     try {
+      const me = await apiJson<{
+        role: string;
+      }>("/api/auth/me");
+
+      if (me.role !== "customer") {
+        setError(
+          "Only customer accounts may request jobs."
+        );
+        return;
+      }
+
       await apiAuth("/api/bookings", {
         method: "POST",
 
@@ -94,10 +120,7 @@ export default function WorkerDetailPage() {
           workerId: id,
           serviceId,
           address,
-          scheduledAt:
-            new Date(
-              scheduledAt
-            ).toISOString(),
+          scheduledAt: date.toISOString(),
           note,
         }),
       });
@@ -106,11 +129,19 @@ export default function WorkerDetailPage() {
         "/dashboard/customer/bookings"
       );
     } catch (e) {
-      setError(
+      const message =
         e instanceof Error
           ? e.message
-          : "Booking failed"
-      );
+          : "Request failed";
+
+      if (
+        /login required|session invalid|HTTP 401/i
+          .test(message)
+      ) {
+        router.push("/login");
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -159,7 +190,9 @@ export default function WorkerDetailPage() {
               </p>
 
               <p className="mt-3 text-xs font-bold text-green-700">
-                Admin-approved profile
+                {worker.isDemo
+                  ? "DEMO PROFILE — Fictional worker, not verified"
+                  : "Admin-reviewed profile"}
                 {" · "}
                 {worker.available
                   ? "Available"
@@ -223,12 +256,8 @@ export default function WorkerDetailPage() {
 
                   <select
                     required
-                    value={
-                      serviceId
-                    }
-                    onChange={(
-                      e
-                    ) =>
+                    value={serviceId}
+                    onChange={(e) =>
                       setServiceId(
                         e.target.value
                       )
@@ -256,9 +285,7 @@ export default function WorkerDetailPage() {
                     minLength={5}
                     maxLength={500}
                     value={address}
-                    onChange={(
-                      e
-                    ) =>
+                    onChange={(e) =>
                       setAddress(
                         e.target.value
                       )
@@ -274,9 +301,7 @@ export default function WorkerDetailPage() {
                     type="datetime-local"
                     required
                     value={scheduledAt}
-                    onChange={(
-                      e
-                    ) =>
+                    onChange={(e) =>
                       setScheduledAt(
                         e.target.value
                       )
@@ -291,9 +316,7 @@ export default function WorkerDetailPage() {
                   <textarea
                     maxLength={1000}
                     value={note}
-                    onChange={(
-                      e
-                    ) =>
+                    onChange={(e) =>
                       setNote(
                         e.target.value
                       )
@@ -303,6 +326,7 @@ export default function WorkerDetailPage() {
                 </label>
 
                 <button
+                  type="submit"
                   disabled={
                     loading ||
                     !worker.available ||
@@ -316,11 +340,10 @@ export default function WorkerDetailPage() {
                 </button>
 
                 <p className="text-xs text-gray-500">
-                  Booking must meet worker
-                  availability and district
-                  rules. This API stores a
-                  cash payment record; it has
-                  no escrow.
+                  This sends a request only. The
+                  worker will send a quotation for
+                  your approval. No payment is
+                  charged at this stage.
                 </p>
               </form>
             </section>

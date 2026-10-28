@@ -16,11 +16,7 @@ import {
 
 import {
   apiJson,
-  getAuthToken,
-} from "@/lib/trusthand-api";
-
-import type {
-  UserRole,
+  type UserRole,
 } from "@/lib/trusthand-api";
 
 type Kind = "public" | UserRole;
@@ -32,27 +28,27 @@ type Line = {
 
 const starters: Record<Kind, string[]> = {
   public: [
-    "My circuit breaker keeps tripping. What should I check safely?",
+    "My circuit breaker keeps tripping. What should I do safely?",
     "Water is leaking under my sink. Which professional do I need?",
-    "What should I ask before hiring an AC technician?",
+    "What should I ask an AC technician before booking?",
   ],
 
   customer: [
-    "Explain my latest booking status and next steps.",
+    "Explain my latest booking status.",
     "What should I check before the worker arrives?",
-    "The job is incomplete. How should I raise this?",
+    "How should I report an incomplete job?",
   ],
 
   worker: [
-    "Prepare a safety and tools checklist for my next job.",
-    "Which questions should I ask before visiting?",
-    "What should I improve in my worker profile?",
+    "Prepare a safety checklist for my next job.",
+    "What questions should I ask before visiting?",
+    "How can I improve my worker profile?",
   ],
 
   admin: [
-    "What operational issues need attention right now?",
-    "Analyze recent cancellations and overdue pending jobs.",
-    "What should I review before approving workers?",
+    "Which operational issues need attention?",
+    "Explain recent cancellations and pending jobs.",
+    "What should I check before approving a worker?",
   ],
 };
 
@@ -70,15 +66,20 @@ export default function TrustAI({
   kind?: Kind;
   floating?: boolean;
 }) {
-  const [open, setOpen] = useState(!floating);
+  const [open, setOpen] =
+    useState(!floating);
 
-  const [lines, setLines] = useState<Line[]>([]);
+  const [lines, setLines] =
+    useState<Line[]>([]);
 
-  const [question, setQuestion] = useState("");
+  const [question, setQuestion] =
+    useState("");
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] =
+    useState(false);
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
 
   async function send(
     event?: FormEvent<HTMLFormElement>,
@@ -86,9 +87,16 @@ export default function TrustAI({
   ) {
     event?.preventDefault();
 
-    const text = (preset ?? question).trim();
+    const text = (
+      preset ?? question
+    ).trim();
 
-    if (!text || loading) return;
+    if (
+      !text ||
+      loading
+    ) {
+      return;
+    }
 
     const old = lines;
 
@@ -98,36 +106,17 @@ export default function TrustAI({
 
     setLines([
       ...old,
-      { role: "user", content: text },
+      {
+        role: "user",
+        content: text,
+      },
     ]);
 
     try {
-      const headers = new Headers({
-        "Content-Type": "application/json",
-      });
-
-      if (kind !== "public") {
-        const token = getAuthToken();
-
-        if (!token) {
-          throw new Error(
-            "Sign in to use your personal assistant."
-          );
-        }
-
-        headers.set(
-          "Authorization",
-          `Bearer ${token}`
-        );
-      }
-
       const result = await apiJson<{
         answer: string;
       }>(`/api/ai/${kind}`, {
         method: "POST",
-
-        headers,
-
         body: JSON.stringify({
           message: text,
           history: old.slice(-6),
@@ -145,7 +134,7 @@ export default function TrustAI({
       setError(
         err instanceof Error
           ? err.message
-          : "Request failed"
+          : "AI request failed."
       );
     } finally {
       setLoading(false);
@@ -162,6 +151,7 @@ export default function TrustAI({
     >
       {floating && !open && (
         <button
+          type="button"
           onClick={() => setOpen(true)}
           className="ml-auto flex items-center gap-2 rounded-full bg-[#184C3B] px-5 py-4 font-bold text-white shadow-2xl"
         >
@@ -186,6 +176,7 @@ export default function TrustAI({
 
             {floating && (
               <button
+                type="button"
                 aria-label="Close AI assistant"
                 onClick={() => setOpen(false)}
               >
@@ -201,29 +192,29 @@ export default function TrustAI({
             {lines.length === 0 && (
               <div className="space-y-3">
                 <p className="text-sm leading-6">
-                  Ask a real question. I can explain
-                  issues, guide next steps and use
-                  the TrustHand data available to
-                  this assistant.
+                  Ask a question about services,
+                  bookings, safety or your available
+                  TrustHand data.
                 </p>
 
-                {starters[kind].map((p) => (
+                {starters[kind].map((text) => (
                   <button
-                    key={p}
+                    key={text}
+                    type="button"
                     onClick={() =>
-                      void send(undefined, p)
+                      void send(undefined, text)
                     }
                     className="block w-full rounded-xl border bg-white p-3 text-left text-sm hover:border-[#184C3B]"
                   >
-                    {p}
+                    {text}
                   </button>
                 ))}
               </div>
             )}
 
-            {lines.map((line, i) => (
+            {lines.map((line, index) => (
               <div
-                key={i}
+                key={index}
                 className={`max-w-[95%] whitespace-pre-wrap rounded-2xl p-3 text-sm leading-6 ${
                   line.role === "user"
                     ? "ml-auto bg-[#184C3B] text-white"
@@ -262,18 +253,20 @@ export default function TrustAI({
               aria-label="Ask AI a question"
               value={question}
               maxLength={1200}
-              onChange={(e) =>
-                setQuestion(e.target.value)
+              onChange={(event) =>
+                setQuestion(event.target.value)
               }
               placeholder="Describe your question..."
               className="min-w-0 flex-1 rounded-xl border px-3 py-3 text-sm outline-[#184C3B]"
             />
 
             <button
+              type="submit"
               disabled={
-                loading || !question.trim()
+                loading ||
+                !question.trim()
               }
-              aria-label="Send"
+              aria-label="Send message"
               className="rounded-xl bg-[#184C3B] p-3 text-white disabled:opacity-40"
             >
               <Send size={18} />
@@ -282,8 +275,7 @@ export default function TrustAI({
 
           <p className="px-4 pb-3 text-[11px] text-gray-500">
             Do not share passwords or sensitive
-            ID documents. Trust AI cannot
-            make account changes.
+            documents. AI cannot perform account changes.
           </p>
         </section>
       )}

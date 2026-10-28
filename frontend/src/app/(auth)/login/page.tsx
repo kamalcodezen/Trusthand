@@ -65,8 +65,10 @@ export default function LoginPage() {
 
       saveAuth(result);
 
-      // Replace with role-specific dashboard routing when ready.
-      router.push("/");
+      router.replace(
+        `/dashboard/${result.user.role}`
+      );
+
       router.refresh();
     } catch (err) {
       setError(

@@ -1,3 +1,4 @@
+
 {
   "name": "backend",
   "version": "1.0.0",
@@ -11,7 +12,9 @@
     "seed": "tsx src/scripts/seed.ts",
     "seed:locations": "tsx src/scripts/seed-locations.ts",
     "admin:create": "tsx src/scripts/create-admin.ts",
-    "smoke": "tsx src/scripts/smoke.ts"
+    "smoke": "tsx src/scripts/smoke.ts",
+    "seed:demo": "tsx src/scripts/seed-demo.ts",
+    "smoke:phase23": "tsx src/scripts/phase23-smoke.ts"
   },
   "dependencies": {
     "@better-auth/mongo-adapter": "^1.7.12",

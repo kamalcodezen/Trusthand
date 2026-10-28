@@ -298,8 +298,10 @@ export default function SignUpPage() {
 
       saveAuth(response);
 
-      // Update this after implementing dashboard routing.
-      router.push("/");
+      router.replace(
+        `/dashboard/${response.user.role}`
+      );
+
       router.refresh();
     } catch (err) {
       setError(
@@ -458,11 +460,10 @@ export default function SignUpPage() {
                   type="button"
                   aria-pressed={role === r}
                   onClick={() => setRole(r)}
-                  className={`relative z-10 h-11 rounded-[9px] text-sm font-semibold transition-colors ${
-                    role === r
+                  className={`relative z-10 h-11 rounded-[9px] text-sm font-semibold transition-colors ${role === r
                       ? "text-[#14583e]"
                       : "text-[#2c4439]"
-                  }`}
+                    }`}
                 >
                   {role === r && (
                     <motion.span
@@ -806,10 +807,10 @@ export default function SignUpPage() {
                 loading
                   ? undefined
                   : {
-                      y: -2,
-                      boxShadow:
-                        "0 8px 20px rgba(20,88,62,0.28)",
-                    }
+                    y: -2,
+                    boxShadow:
+                      "0 8px 20px rgba(20,88,62,0.28)",
+                  }
               }
               whileTap={
                 loading

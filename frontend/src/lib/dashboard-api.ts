@@ -1,7 +1,6 @@
 
 import {
   apiJson,
-  getAuthToken,
   type UserRole,
 } from "@/lib/trusthand-api";
 
@@ -34,6 +33,7 @@ export type Worker = {
   reviewCount?: number;
   completedJobs?: number;
   verificationStatus?: string;
+  isDemo?: boolean;
   services: Service[];
 };
 
@@ -97,6 +97,7 @@ export type Overview = {
   pendingVerifications: number;
   earnedFees: number;
   grossPayments: number;
+
   recentBookings: Array<{
     id: string;
     service: string;
@@ -110,61 +111,51 @@ export type Overview = {
 export function apiAuth<T>(
   path: string,
   init: RequestInit = {}
-) {
-  const token = getAuthToken();
-
-  if (!token) {
-    return Promise.reject(
-      new Error("Please sign in again.")
-    );
-  }
-
-  const headers = new Headers(init.headers);
-
-  headers.set(
-    "Authorization",
-    `Bearer ${token}`
-  );
-
-  return apiJson<T>(path, {
-    ...init,
-    headers,
-  });
+): Promise<T> {
+  return apiJson<T>(path, init);
 }
 
-export const postJSON = (payload: unknown) => ({
+export const postJSON = (
+  payload: unknown
+) => ({
   method: "POST",
   body: JSON.stringify(payload),
 });
 
-export const patchJSON = (payload: unknown) => ({
+export const patchJSON = (
+  payload: unknown
+) => ({
   method: "PATCH",
   body: JSON.stringify(payload),
 });
 
-export const putJSON = (payload: unknown) => ({
+export const putJSON = (
+  payload: unknown
+) => ({
   method: "PUT",
   body: JSON.stringify(payload),
 });
 
 export function displayName(
-  v: IDObject | string | undefined
-) {
-  return typeof v === "string"
-    ? v
-    : v?.name || "Unknown";
+  value: IDObject | string | undefined
+): string {
+  return typeof value === "string"
+    ? value
+    : value?.name || "Unknown";
 }
 
 export function displayDate(
-  v: string | undefined
-) {
-  if (!v) return "—";
+  value: string | undefined
+): string {
+  if (!value) {
+    return "—";
+  }
 
-  const d = new Date(v);
+  const date = new Date(value);
 
-  return Number.isNaN(d.getTime())
+  return Number.isNaN(date.getTime())
     ? "—"
-    : d.toLocaleString("en-BD", {
+    : date.toLocaleString("en-BD", {
         dateStyle: "medium",
         timeStyle: "short",
       });

@@ -1,3 +1,4 @@
+
 import mongoose, { Schema } from "mongoose";
 
 const schema = new Schema(
@@ -6,49 +7,49 @@ const schema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "Booking",
       required: true,
-      unique: true
+      unique: true,
     },
 
     customer: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: true
+      required: true,
     },
 
     worker: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: true
+      required: true,
     },
 
     amount: {
       type: Number,
       required: true,
-      min: 0
+      min: 0,
     },
 
     platformFee: {
       type: Number,
       required: true,
-      min: 0
+      min: 0,
     },
 
     method: {
       type: String,
       enum: ["cash", "manual"],
-      default: "cash"
+      default: "cash",
     },
 
     status: {
       type: String,
-      enum: ["pending", "paid", "refunded"],
-      default: "pending"
+      enum: ["pending", "paid", "refunded", "void"],
+      default: "pending",
     },
 
     paidAt: {
       type: Date,
-      default: null
-    }
+      default: null,
+    },
   },
   { timestamps: true }
 );

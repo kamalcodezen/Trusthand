@@ -1,8 +1,9 @@
+
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   reactCompiler: true,
+
   images: {
     remotePatterns: [
       {
@@ -11,10 +12,15 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+
   turbopack: {
+    root: process.cwd(),
+
     rules: {
       "*.css": {
-        loaders: ["@tailwindcss/turbopack"],
+        loaders: [
+          "@tailwindcss/turbopack",
+        ],
         as: "*.css",
       },
     },

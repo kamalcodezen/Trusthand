@@ -1,11 +1,8 @@
+
 "use client";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-
-import {
-  getAuthToken,
-} from "@/lib/trusthand-api";
 
 import {
   apiAuth,
@@ -16,25 +13,30 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!getAuthToken()) {
-      router.replace("/login");
-      return;
-    }
+    let active = true;
 
     apiAuth<Profile>("/api/auth/me")
-      .then((user) =>
-        router.replace(
-          `/dashboard/${user.role}`
-        )
-      )
-      .catch(() =>
-        router.replace("/login")
-      );
+      .then((user) => {
+        if (active) {
+          router.replace(
+            `/dashboard/${user.role}`
+          );
+        }
+      })
+      .catch(() => {
+        if (active) {
+          router.replace("/login");
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, [router]);
 
   return (
-    <p className="p-10">
+    <main className="p-10 text-center text-slate-600">
       Opening your dashboard...
-    </p>
+    </main>
   );
 }

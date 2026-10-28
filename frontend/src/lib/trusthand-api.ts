@@ -1,17 +1,15 @@
 
-const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
-).replace(/\/+$/, "");
-
 export type LocationOption = {
   name: string;
   bnName: string;
 };
 
-export type UserRole = "customer" | "worker" | "admin";
+export type UserRole =
+  | "customer"
+  | "worker"
+  | "admin";
 
 export type AuthResponse = {
-  token: string;
   user: {
     id: string;
     name: string;
@@ -34,57 +32,102 @@ export async function apiJson<T>(
   path: string,
   init: RequestInit = {}
 ): Promise<T> {
-  const headers = new Headers(init.headers);
+  if (
+    !path.startsWith("/api/") ||
+    path.startsWith("//")
+  ) {
+    throw new Error("Invalid API path");
+  }
 
-  if (init.body && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
+  const headers = new Headers(
+    init.headers
+  );
+
+  if (
+    init.body &&
+    !headers.has("Content-Type")
+  ) {
+    headers.set(
+      "Content-Type",
+      "application/json"
+    );
   }
 
   let response: Response;
 
   try {
-    response = await fetch(`${API_URL}${path}`, {
+    response = await fetch(path, {
       ...init,
       headers,
+      credentials: "same-origin",
       cache: "no-store",
     });
   } catch {
     throw new Error(
-      "Backend unreachable. Check that the TrustHand backend is running and NEXT_PUBLIC_API_URL is set correctly."
+      "Unable to connect to TrustHand API."
     );
   }
 
-  const payload = (await response.json().catch(() => null)) as
-    | ApiEnvelope<T>
-    | null;
+  const payload = (
+    await response.json().catch(() => null)
+  ) as ApiEnvelope<T> | null;
 
-  if (!response.ok || payload?.success === false) {
+  if (
+    !response.ok ||
+    payload?.success === false
+  ) {
     throw new Error(
-      payload?.message || `Server returned HTTP ${response.status}.`
+      payload?.message ||
+      `HTTP ${response.status}`
     );
   }
 
-  if (!payload || payload.data === undefined) {
-    throw new Error("Unexpected response from the TrustHand backend.");
+  if (
+    !payload ||
+    (
+      payload.data === undefined &&
+      (init.method || "GET").toUpperCase() === "GET"
+    )
+  ) {
+    throw new Error(
+      "Unexpected backend response"
+    );
   }
 
-  return payload.data;
+  return payload.data as T;
 }
 
-// Temporary MVP authentication storage.
-// Replace with secure HttpOnly cookie sessions for production.
-export function saveAuth({ token, user }: AuthResponse): void {
-  sessionStorage.setItem("trusthand_token", token);
-  sessionStorage.setItem("trusthand_user", JSON.stringify(user));
+// User information is UI-only;
+// session credentials stay in HttpOnly cookie.
+export function saveAuth({
+  user,
+}: AuthResponse) {
+  if (typeof window !== "undefined") {
+    sessionStorage.setItem(
+      "trusthand_user",
+      JSON.stringify(user)
+    );
+  }
 }
 
-export function getAuthToken(): string | null {
-  return typeof window === "undefined"
-    ? null
-    : sessionStorage.getItem("trusthand_token");
-}
+export async function clearAuth(): Promise<void> {
+  const result = await fetch(
+    "/api/auth/logout",
+    {
+      method: "POST",
+      credentials: "same-origin",
+    }
+  );
 
-export function clearAuth(): void {
-  sessionStorage.removeItem("trusthand_token");
-  sessionStorage.removeItem("trusthand_user");
+  if (typeof window !== "undefined") {
+    sessionStorage.removeItem(
+      "trusthand_user"
+    );
+  }
+
+  if (!result.ok) {
+    throw new Error(
+      "Local sign-out completed, but server revocation could not be confirmed."
+    );
+  }
 }

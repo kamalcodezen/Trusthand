@@ -22,7 +22,6 @@ export default function HomePage() {
       <WorkerCta />
       <FaqSection />
       <FooterCta />
-
       <TrustAI kind="public" floating />
     </main>
   );
