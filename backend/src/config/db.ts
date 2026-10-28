@@ -2,19 +2,13 @@ import mongoose from "mongoose";
 import { env } from "./env.js";
 
 export default async function connectDB(): Promise<void> {
-  try {
-    await mongoose.connect(env.MONGODB_URI, {
-      dbName: env.MONGODB_DATABASE,
-    });
+  await mongoose.connect(env.MONGODB_URI, {
+    dbName: env.MONGODB_DATABASE,
+    serverSelectionTimeoutMS: 8000
+  });
 
-    console.log("MongoDB connected successfully");
-    console.log("Mongoose connection state:", mongoose.connection.readyState);
-  } catch (error) {
-    console.error(
-      "MongoDB connection failed:",
-      error instanceof Error ? error.message : error,
-    );
-
-    process.exit(1);
-  }
+  console.log(
+    "MongoDB connected:",
+    env.MONGODB_DATABASE
+  );
 }
