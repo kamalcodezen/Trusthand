@@ -1,13 +1,12 @@
-
 {
   "name": "backend",
   "version": "1.0.0",
   "description": "TrustHand full API with MongoDB, roles and Bangladesh geo selectors",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js",
+    "dev": "node init && tsx watch src/server.ts",
+    "build": "node init && tsc",
+    "start": "node init && node dist/server.js",
     "typecheck": "tsc --noEmit",
     "seed": "tsx src/scripts/seed.ts",
     "seed:locations": "tsx src/scripts/seed-locations.ts",
