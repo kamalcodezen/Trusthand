@@ -16,7 +16,6 @@ import {
 
 import {
   clearAuth,
-  getAuthToken,
   type UserRole,
 } from "@/lib/trusthand-api";
 
@@ -66,21 +65,24 @@ export default function DashboardShell({
   children: ReactNode;
 }) {
   const router = useRouter();
-  const path = usePathname();
+  const pathname = usePathname();
 
   const [current, setCurrent] =
     useState<Profile | null>(null);
 
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] =
+    useState("");
+
+  const [signingOut, setSigningOut] =
+    useState(false);
 
   useEffect(() => {
-    if (!getAuthToken()) {
-      router.replace("/login");
-      return;
-    }
+    let active = true;
 
     apiAuth<Profile>("/api/auth/me")
       .then((user) => {
+        if (!active) return;
+
         if (user.role !== role) {
           router.replace(
             `/dashboard/${user.role}`
@@ -89,20 +91,58 @@ export default function DashboardShell({
         }
 
         setCurrent(user);
+        setFailure("");
       })
-      .catch(() => {
-        clearAuth();
-        setFailed(true);
-        router.replace("/login");
+      .catch((error: unknown) => {
+        if (!active) return;
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Account verification failed";
+
+        if (
+          /login required|session invalid|account not active|http 401|http 403/i
+            .test(message)
+        ) {
+          router.replace("/login");
+          return;
+        }
+
+        setFailure(
+          "Unable to load your account. Check the backend and refresh."
+        );
       });
+
+    return () => {
+      active = false;
+    };
   }, [role, router]);
+
+  async function signOut() {
+    setFailure("");
+    setSigningOut(true);
+
+    try {
+      await clearAuth();
+    } catch (error) {
+      setFailure(
+        error instanceof Error
+          ? error.message
+          : "Server logout could not be confirmed."
+      );
+    } finally {
+      setSigningOut(false);
+      router.replace("/login");
+      router.refresh();
+    }
+  }
 
   if (!current) {
     return (
       <main className="min-h-[65vh] bg-[#f7faf8] p-10 text-center text-slate-600">
-        {failed
-          ? "Redirecting to sign in..."
-          : "Checking your TrustHand account..."}
+        {failure ||
+          "Checking your TrustHand account..."}
       </main>
     );
   }
@@ -116,7 +156,7 @@ export default function DashboardShell({
           Portal
         </h2>
 
-        <p className="mt-1 mb-5 truncate text-xs text-gray-500">
+        <p className="mb-5 mt-1 truncate text-xs text-gray-500">
           {current.name}
         </p>
 
@@ -129,17 +169,18 @@ export default function DashboardShell({
               section ? `/${section}` : ""
             }`;
 
+            const selected =
+              pathname === href;
+
             return (
               <Link
                 key={href}
                 href={href}
                 aria-current={
-                  path === href
-                    ? "page"
-                    : undefined
+                  selected ? "page" : undefined
                 }
                 className={`rounded-xl px-3 py-2.5 text-sm font-semibold ${
-                  path === href
+                  selected
                     ? "bg-[#184C3B] text-white"
                     : "hover:bg-[#e5f0e9]"
                 }`}
@@ -157,18 +198,28 @@ export default function DashboardShell({
           </Link>
 
           <button
-            className="rounded-xl border px-3 py-2.5 text-left text-sm text-red-700"
-            onClick={() => {
-              clearAuth();
-              router.replace("/login");
-            }}
+            type="button"
+            disabled={signingOut}
+            onClick={signOut}
+            className="rounded-xl border px-3 py-2.5 text-left text-sm text-red-700 disabled:opacity-50"
           >
-            Sign out
+            {signingOut
+              ? "Signing out..."
+              : "Sign out"}
           </button>
         </nav>
       </aside>
 
       <main className="min-w-0 flex-1 p-5 md:p-9">
+        {failure && (
+          <p
+            role="alert"
+            className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700"
+          >
+            {failure}
+          </p>
+        )}
+
         {children}
       </main>
     </div>

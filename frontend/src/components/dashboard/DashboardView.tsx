@@ -8,12 +8,9 @@ import {
 } from "react";
 
 import Link from "next/link";
-
-import type {
-  UserRole,
-} from "@/lib/trusthand-api";
-
 import TrustAI from "@/components/ai/TrustAI";
+import BookingWorkspace from "@/components/dashboard/BookingWorkspace";
+import type { UserRole } from "@/lib/trusthand-api";
 
 import {
   apiAuth,
@@ -30,47 +27,33 @@ import {
   type Service,
 } from "@/lib/dashboard-api";
 
-const valid: Record<UserRole, string[]> = {
+const allowed: Record<UserRole, string[]> = {
   customer: [
-    "overview",
-    "bookings",
-    "payments",
-    "reviews",
-    "profile",
-    "ai",
+    "overview", "bookings", "payments",
+    "reviews", "profile", "ai",
   ],
-
   worker: [
-    "overview",
-    "bookings",
-    "payments",
-    "profile",
-    "ai",
+    "overview", "bookings", "payments",
+    "profile", "ai",
   ],
-
   admin: [
-    "overview",
-    "customers",
-    "workers",
-    "bookings",
-    "payments",
-    "services",
-    "settings",
-    "ai",
+    "overview", "customers", "workers",
+    "bookings", "payments", "services",
+    "settings", "ai",
   ],
 };
 
-const inputStyle =
-  "w-full rounded-xl border border-[#dbe5dd] bg-white p-3 text-sm outline-[#184c3b]";
-
-const primary =
-  "rounded-xl bg-[#184c3b] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50";
-
-const secondary =
-  "rounded-xl border border-[#b6cdc0] bg-white px-3 py-2 text-sm font-semibold text-[#184c3b] hover:bg-[#eef6f0] disabled:opacity-40";
-
 const panel =
   "rounded-2xl border border-[#e0e8e2] bg-white p-5 shadow-sm";
+
+const input =
+  "w-full rounded-xl border border-[#dbe5dd] bg-white p-3 text-sm";
+
+const button =
+  "rounded-xl bg-[#184c3b] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50";
+
+const outline =
+  "rounded-xl border border-[#b6cdc0] bg-white px-3 py-2 text-sm font-semibold text-[#184c3b] disabled:opacity-40";
 
 type Review = {
   _id: string;
@@ -80,20 +63,19 @@ type Review = {
   createdAt: string;
 };
 
-type AdminRow =
-  | Person
-  | {
-      id: string;
-      bookingId?: string;
-      customer?: string;
-      worker?: string;
-      service?: string;
-      scheduledAt?: string;
-      amount?: number;
-      platformFee?: number;
-      paidAt?: string;
-      status: string;
-    };
+type AdminPayment = {
+  id: string;
+  customer: string;
+  amount: number;
+  platformFee: number;
+  status: string;
+  paidAt?: string;
+};
+
+type Settings = {
+  serviceFeePercent: number;
+  supportEmail: string;
+};
 
 export default function DashboardView({
   role,
@@ -102,11 +84,23 @@ export default function DashboardView({
   role: UserRole;
   section: string;
 }) {
-  const [rows, setRows] = useState<AdminRow[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
+  const [bookings, setBookings] =
+    useState<Booking[]>([]);
+
+  const [payments, setPayments] =
+    useState<Payment[]>([]);
+
+  const [adminPayments, setAdminPayments] =
+    useState<AdminPayment[]>([]);
+
+  const [people, setPeople] =
+    useState<Person[]>([]);
+
+  const [reviews, setReviews] =
+    useState<Review[]>([]);
+
+  const [services, setServices] =
+    useState<Service[]>([]);
 
   const [profile, setProfile] =
     useState<Profile | null>(null);
@@ -114,10 +108,8 @@ export default function DashboardView({
   const [overview, setOverview] =
     useState<Overview | null>(null);
 
-  const [settings, setSettings] = useState<{
-    serviceFeePercent: number;
-    supportEmail: string;
-  } | null>(null);
+  const [settings, setSettings] =
+    useState<Settings | null>(null);
 
   const [form, setForm] =
     useState<Record<string, string>>({});
@@ -125,16 +117,39 @@ export default function DashboardView({
   const [selectedServices, setSelectedServices] =
     useState<string[]>([]);
 
-  const [busy, setBusy] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [reload, setReload] = useState(0);
+  const [loading, setLoading] =
+    useState(true);
 
-  const allowed = valid[role].includes(section);
+  const [busy, setBusy] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  const [notice, setNotice] =
+    useState("");
+
+  const [reload, setReload] =
+    useState(0);
+
+  const valid = allowed[role].includes(section);
+
+  const setField = (
+    key: string,
+    value: string
+  ) => {
+    setForm((v) => ({
+      ...v,
+      [key]: value,
+    }));
+  };
 
   useEffect(() => {
-    if (!allowed || section === "ai") {
+    if (
+      !valid ||
+      section === "bookings" ||
+      section === "ai"
+    ) {
       setLoading(false);
       return;
     }
@@ -143,87 +158,105 @@ export default function DashboardView({
 
     setLoading(true);
     setError("");
-    setNotice("");
 
-    const load = async () => {
+    const read = async () => {
       if (role === "admin") {
         if (section === "overview") {
-          const result = await apiAuth<Overview>(
+          const value = await apiAuth<Overview>(
             "/api/admin/overview"
           );
 
-          if (active) setOverview(result);
+          if (active) {
+            setOverview(value);
+          }
         } else if (section === "settings") {
-          const result = await apiAuth<{
-            serviceFeePercent: number;
-            supportEmail: string;
-          }>("/api/admin/settings");
+          const value = await apiAuth<Settings>(
+            "/api/admin/settings"
+          );
 
-          if (active) setSettings(result);
+          if (active) {
+            setSettings(value);
+          }
         } else if (section === "services") {
-          const result = await apiAuth<Service[]>(
+          const value = await apiAuth<Service[]>(
             "/api/services?all=true"
           );
 
-          if (active) setServices(result);
-        } else {
-          const endpoint =
+          if (active) {
+            setServices(value);
+          }
+        } else if (section === "payments") {
+          const value =
+            await apiAuth<AdminPayment[]>(
+              "/api/admin/payments"
+            );
+
+          if (active) {
+            setAdminPayments(value);
+          }
+        } else if (
+          section === "customers" ||
+          section === "workers"
+        ) {
+          const path =
             section === "customers"
               ? "users"
-              : section;
+              : "workers";
 
-          const result = await apiAuth<AdminRow[]>(
-            `/api/admin/${endpoint}`
-          );
+          const value =
+            await apiAuth<Person[]>(
+              `/api/admin/${path}`
+            );
 
-          if (active) setRows(result);
+          if (active) {
+            setPeople(value);
+          }
         }
       } else {
         if (
           section === "overview" ||
-          section === "bookings"
+          section === "reviews"
         ) {
-          const result = await apiAuth<Booking[]>(
-            "/api/bookings"
-          );
+          const value =
+            await apiAuth<Booking[]>(
+              "/api/bookings"
+            );
 
-          if (active) setBookings(result);
+          if (active) {
+            setBookings(value);
+          }
         }
 
         if (
-          section === "payments" ||
-          section === "overview"
+          section === "overview" ||
+          section === "payments"
         ) {
-          const result = await apiAuth<Payment[]>(
-            "/api/payments"
-          );
+          const value =
+            await apiAuth<Payment[]>(
+              "/api/payments"
+            );
 
-          if (active) setPayments(result);
-        }
-
-        if (section === "reviews") {
-          const result = await apiAuth<Review[]>(
-            "/api/reviews/mine"
-          );
-
-          if (active) setReviews(result);
+          if (active) {
+            setPayments(value);
+          }
         }
 
         if (
           section === "profile" ||
           section === "overview"
         ) {
-          const result = await apiAuth<Profile>(
-            role === "worker"
-              ? "/api/workers/me"
-              : "/api/auth/me"
-          );
+          const value =
+            await apiAuth<Profile>(
+              role === "worker"
+                ? "/api/workers/me"
+                : "/api/auth/me"
+            );
 
           if (active) {
-            setProfile(result);
+            setProfile(value);
 
             setSelectedServices(
-              (result.services ?? []).map(
+              (value.services || []).map(
                 (s) => s._id
               )
             );
@@ -234,45 +267,53 @@ export default function DashboardView({
           section === "profile" &&
           role === "worker"
         ) {
-          const result = await apiAuth<Service[]>(
-            "/api/services"
-          );
+          const value =
+            await apiAuth<Service[]>(
+              "/api/services"
+            );
 
-          if (active) setServices(result);
+          if (active) {
+            setServices(value);
+          }
         }
 
         if (section === "reviews") {
-          const result = await apiAuth<Booking[]>(
-            "/api/bookings"
-          );
+          const value =
+            await apiAuth<Review[]>(
+              "/api/reviews/mine"
+            );
 
-          if (active) setBookings(result);
+          if (active) {
+            setReviews(value);
+          }
         }
       }
     };
 
-    load()
-      .catch((err) => {
+    void read()
+      .catch((e) => {
         if (active) {
           setError(
-            err instanceof Error
-              ? err.message
+            e instanceof Error
+              ? e.message
               : "Loading failed"
           );
         }
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       });
 
     return () => {
       active = false;
     };
-  }, [role, section, allowed, reload]);
+  }, [role, section, valid, reload]);
 
-  async function action(
+  async function act(
     path: string,
-    method: "PATCH" | "POST" | "PUT",
+    method: "POST" | "PATCH" | "PUT",
     payload: unknown
   ) {
     setBusy(true);
@@ -280,21 +321,21 @@ export default function DashboardView({
     setNotice("");
 
     try {
-      const config =
+      await apiAuth(
+        path,
         method === "POST"
           ? postJSON(payload)
           : method === "PUT"
             ? putJSON(payload)
-            : patchJSON(payload);
+            : patchJSON(payload)
+      );
 
-      await apiAuth(path, config);
-
-      setNotice("Updated successfully.");
-      setReload((v) => v + 1);
-    } catch (err) {
+      setNotice("Saved successfully.");
+      setReload((x) => x + 1);
+    } catch (e) {
       setError(
-        err instanceof Error
-          ? err.message
+        e instanceof Error
+          ? e.message
           : "Update failed"
       );
     } finally {
@@ -302,23 +343,10 @@ export default function DashboardView({
     }
   }
 
-  const onForm = (
-    field: string,
-    value: string
-  ) => {
-    setForm((v) => ({
-      ...v,
-      [field]: value,
-    }));
-  };
-
-  if (!allowed) {
+  if (!valid) {
     return (
       <div className={panel}>
-        <h1 className="text-xl font-bold">
-          Page not found
-        </h1>
-
+        Page not found.{" "}
         <Link
           className="underline"
           href={`/dashboard/${role}`}
@@ -330,7 +358,7 @@ export default function DashboardView({
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6 text-[#16382d]">
       <div>
         <p className="text-xs font-bold uppercase tracking-widest text-[#58796a]">
           TrustHand / {role}
@@ -355,36 +383,39 @@ export default function DashboardView({
       {notice && (
         <p
           role="status"
-          className="rounded-xl bg-[#e6f4e8] p-4 text-sm text-[#184c3b]"
+          className="rounded-xl bg-[#e6f4e8] p-4 text-sm"
         >
           {notice}
         </p>
       )}
 
       {loading && (
-        <p className={panel}>
-          Loading live TrustHand records...
-        </p>
+        <div className={panel}>
+          Loading TrustHand records...
+        </div>
       )}
 
       {section === "ai" && (
         <TrustAI kind={role} />
       )}
 
-      {/* ADMIN OVERVIEW */}
+      {section === "bookings" && (
+        <BookingWorkspace role={role} />
+      )}
+
       {!loading &&
         section === "overview" &&
         role === "admin" &&
         overview && (
           <>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[
+              {([
                 ["Customers", overview.customers],
                 ["Workers", overview.workers],
                 ["Bookings", overview.bookings],
                 ["Open bookings", overview.activeBookings],
                 [
-                  "Pending verification",
+                  "Pending worker reviews",
                   overview.pendingVerifications,
                 ],
                 [
@@ -396,13 +427,13 @@ export default function DashboardView({
                   overview.completedBookings,
                 ],
                 [
-                  "Fees recorded (BDT)",
+                  "Recorded fees (BDT)",
                   overview.earnedFees,
                 ],
-              ].map(([label, count]) => (
-                <div className={panel} key={label}>
+              ] as const).map(([name, count]) => (
+                <div className={panel} key={name}>
                   <p className="text-sm text-gray-500">
-                    {label}
+                    {name}
                   </p>
 
                   <p className="mt-2 text-3xl font-bold">
@@ -412,15 +443,15 @@ export default function DashboardView({
               ))}
             </div>
 
-            <section className={panel}>
-              <h2 className="mb-4 text-lg font-bold">
+            <div className={panel}>
+              <h2 className="mb-3 text-lg font-bold">
                 Recent bookings
               </h2>
 
               {overview.recentBookings.map((b) => (
                 <p
-                  className="border-t py-3 text-sm"
                   key={b.id}
+                  className="border-t py-3 text-sm"
                 >
                   {b.service} — {b.customer} /
                   {b.worker} — <b>{b.status}</b>
@@ -428,64 +459,51 @@ export default function DashboardView({
               ))}
 
               <Link
-                className="mt-4 inline-block underline"
-                href="/dashboard/admin/ai"
+                className="underline"
+                href="/dashboard/admin/bookings"
               >
-                Ask Admin AI to analyze operational
-                issues
+                Manage bookings
               </Link>
-            </section>
+            </div>
           </>
         )}
 
-      {/* CUSTOMER AND WORKER OVERVIEW */}
       {!loading &&
         section === "overview" &&
         role !== "admin" && (
           <>
             <div className="grid gap-4 sm:grid-cols-3">
-              <div className={panel}>
-                <p className="text-sm text-gray-500">
-                  All my bookings
-                </p>
+              {([
+                ["All bookings", bookings.length],
+                [
+                  "Active",
+                  bookings.filter((b) =>
+                    [
+                      "pending",
+                      "quoted",
+                      "confirmed",
+                      "in_progress",
+                      "awaiting_completion",
+                    ].includes(b.status)
+                  ).length,
+                ],
+                [
+                  "Completed",
+                  bookings.filter(
+                    (b) => b.status === "completed"
+                  ).length,
+                ],
+              ] as const).map(([name, count]) => (
+                <div key={name} className={panel}>
+                  <p className="text-sm text-gray-500">
+                    {name}
+                  </p>
 
-                <p className="mt-2 text-3xl font-bold">
-                  {bookings.length}
-                </p>
-              </div>
-
-              <div className={panel}>
-                <p className="text-sm text-gray-500">
-                  Active jobs
-                </p>
-
-                <p className="mt-2 text-3xl font-bold">
-                  {
-                    bookings.filter((b) =>
-                      [
-                        "pending",
-                        "confirmed",
-                        "in_progress",
-                      ].includes(b.status)
-                    ).length
-                  }
-                </p>
-              </div>
-
-              <div className={panel}>
-                <p className="text-sm text-gray-500">
-                  Completed jobs
-                </p>
-
-                <p className="mt-2 text-3xl font-bold">
-                  {
-                    bookings.filter(
-                      (b) =>
-                        b.status === "completed"
-                    ).length
-                  }
-                </p>
-              </div>
+                  <p className="mt-2 text-3xl font-bold">
+                    {count}
+                  </p>
+                </div>
+              ))}
             </div>
 
             <div className={panel}>
@@ -495,35 +513,30 @@ export default function DashboardView({
               </h2>
 
               <p className="my-3 text-sm text-gray-600">
-                See your actual job records and get
-                role-specific guidance.
+                Follow your jobs and payment records.
               </p>
 
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-2">
                 <Link
-                  className={secondary}
+                  className={button}
                   href={`/dashboard/${role}/bookings`}
                 >
                   View jobs
                 </Link>
 
                 <Link
-                  className={primary}
+                  className={outline}
                   href={`/dashboard/${role}/ai`}
                 >
-                  Ask{" "}
-                  {role === "worker"
-                    ? "Worker Copilot"
-                    : "Customer Assist"}{" "}
-                  AI
+                  Ask AI assistant
                 </Link>
 
                 {role === "customer" && (
                   <Link
-                    className={secondary}
+                    className={outline}
                     href="/find-workers"
                   >
-                    Find a professional
+                    Find workers
                   </Link>
                 )}
               </div>
@@ -532,355 +545,123 @@ export default function DashboardView({
             {role === "worker" &&
               profile?.verificationStatus !==
                 "approved" && (
-                <p className="rounded-xl bg-amber-50 p-4 text-sm">
-                  Your verification status is{" "}
-                  <b>
-                    {profile?.verificationStatus}
-                  </b>
-                  . Public search and booking
-                  require admin approval.
+                <p className="rounded-xl bg-amber-50 p-4">
+                  Worker approval pending. You cannot
+                  receive public booking requests yet.
                 </p>
               )}
           </>
         )}
 
-      {/* BOOKINGS */}
       {!loading &&
-        section === "bookings" && (
-          <section className={panel}>
+        section === "payments" && (
+          <div className={panel}>
             <h2 className="mb-4 text-xl font-bold">
-              {role === "admin"
-                ? "Platform bookings"
-                : "Your bookings"}
+              Cash / manual payment records
             </h2>
 
-            {role === "admin" ? (
-              rows.length === 0 ? (
-                <p>No bookings recorded.</p>
-              ) : (
-                rows.map((b) => {
-                  const r = b as {
-                    id: string;
-                    customer?: string;
-                    worker?: string;
-                    service?: string;
-                    status: string;
-                    scheduledAt?: string;
-                  };
+            {(role === "admin"
+              ? adminPayments
+              : payments
+            ).length === 0 && (
+              <p className="text-sm">
+                No payment records yet.
+              </p>
+            )}
 
-                  const transitions:
-                    Record<string, string[]> = {
-                      pending: [
-                        "confirmed",
-                        "cancelled",
-                      ],
-                      confirmed: [
-                        "in_progress",
-                        "cancelled",
-                      ],
-                      in_progress: [
-                        "completed",
-                        "cancelled",
-                      ],
-                    };
+            {(role === "admin"
+              ? adminPayments
+              : payments
+            ).map((p, i) => {
+              const value =
+                p as Payment & AdminPayment;
 
-                  const choices = [
-                    r.status,
-                    ...(transitions[r.status] ?? []),
-                  ];
+              const key =
+                value.id ||
+                value._id ||
+                String(i);
 
-                  return (
-                    <div
-                      key={r.id}
-                      className="flex flex-wrap items-center justify-between gap-3 border-t py-4 text-sm"
-                    >
-                      <div>
-                        <b>{r.service}</b>
+              return (
+                <div
+                  key={key}
+                  className="flex flex-wrap items-center justify-between gap-3 border-t py-4 text-sm"
+                >
+                  <div>
+                    <b>
+                      ৳{value.amount?.toLocaleString("en-BD")}
+                    </b>
+                    {" · "}
+                    {value.status}
 
-                        <p>
-                          {r.customer} → {r.worker}
-                        </p>
+                    <p className="text-xs text-gray-500">
+                      {role === "admin"
+                        ? `Customer: ${value.customer || "Unknown"} · Fee: ৳${value.platformFee}`
+                        : `Booking: ${
+                            typeof value.booking === "string"
+                              ? value.booking.slice(-6)
+                              : value.booking?._id?.slice(-6)
+                          }`}
+                    </p>
+                  </div>
 
-                        <p>
-                          {displayDate(r.scheduledAt)}
-                          {" · "}
-                          {r.status}
-                        </p>
-                      </div>
-
-                      <select
-                        aria-label={`Change booking ${r.id} status`}
-                        className={secondary}
-                        disabled={
-                          busy ||
-                          [
-                            "completed",
-                            "cancelled",
-                          ].includes(r.status)
-                        }
-                        value={r.status}
-                        onChange={(e) =>
-                          void action(
-                            `/api/admin/bookings/${r.id}`,
+                  {role === "admin" &&
+                    ["pending", "paid"].includes(
+                      value.status
+                    ) && (
+                      <button
+                        className={outline}
+                        disabled={busy}
+                        onClick={() =>
+                          void act(
+                            `/api/payments/${key}`,
                             "PATCH",
                             {
                               status:
-                                e.target.value,
+                                value.status === "pending"
+                                  ? "paid"
+                                  : "refunded",
                             }
                           )
                         }
                       >
-                        {choices
-                          .filter(
-                            (s, i, a) =>
-                              a.indexOf(s) === i
-                          )
-                          .map((s) => (
-                            <option key={s}>
-                              {s}
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-                  );
-                })
-              )
-            ) : bookings.length === 0 ? (
-              <p>
-                No bookings found.{" "}
-                {role === "customer"
-                  ? "Find a worker to start."
-                  : "New assigned jobs will appear here."}
-              </p>
-            ) : (
-              bookings.map((b) => {
-                const workerTransitions:
-                  Record<string, string[]> = {
-                    pending: [
-                      "confirmed",
-                      "cancelled",
-                    ],
-                    confirmed: [
-                      "in_progress",
-                      "cancelled",
-                    ],
-                    in_progress: ["completed"],
-                  };
+                        {value.status === "pending"
+                          ? "Mark cash as received"
+                          : "Record manual refund"}
+                      </button>
+                    )}
+                </div>
+              );
+            })}
 
-                const transitions =
-                  role === "worker"
-                    ? workerTransitions[
-                        b.status
-                      ] ?? []
-                    : role === "customer" &&
-                        [
-                          "pending",
-                          "confirmed",
-                        ].includes(b.status)
-                      ? ["cancelled"]
-                      : [];
-
-                return (
-                  <article
-                    className="border-t py-4"
-                    key={b._id}
-                  >
-                    <div className="flex flex-wrap justify-between gap-3">
-                      <div>
-                        <h3 className="font-bold">
-                          {displayName(
-                            b.service
-                          )}
-                        </h3>
-
-                        <p className="text-sm text-gray-600">
-                          {role === "worker"
-                            ? `Customer: ${displayName(b.customer)}`
-                            : `Worker: ${displayName(b.worker)}`}
-                        </p>
-
-                        <p className="text-xs text-gray-500">
-                          {displayDate(
-                            b.scheduledAt
-                          )}
-                          {" · "}৳{b.amount}
-                          {" · "}
-                          {b.status}
-                        </p>
-
-                        {role === "worker" && (
-                          <p className="text-xs text-gray-500">
-                            Address: {b.address}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        {transitions.map(
-                          (status) => (
-                            <button
-                              key={status}
-                              disabled={busy}
-                              className={
-                                secondary
-                              }
-                              onClick={() =>
-                                void action(
-                                  `/api/bookings/${b._id}/status`,
-                                  "PATCH",
-                                  { status }
-                                )
-                              }
-                            >
-                              {status.replaceAll(
-                                "_",
-                                " "
-                              )}
-                            </button>
-                          )
-                        )}
-                      </div>
-                    </div>
-
-                    {role === "customer" &&
-                      b.status ===
-                        "completed" && (
-                        <Link
-                          href="/dashboard/customer/reviews"
-                          className="mt-3 inline-block text-sm font-semibold underline"
-                        >
-                          Review this job
-                        </Link>
-                      )}
-                  </article>
-                );
-              })
-            )}
-          </section>
-        )}
-
-      {/* PAYMENTS */}
-      {!loading &&
-        section === "payments" && (
-          <section className={panel}>
-            <h2 className="mb-4 text-xl font-bold">
-              Payment records
-            </h2>
-
-            {(role === "admin"
-              ? rows
-              : payments
-            ).length === 0 ? (
-              <p>No payments recorded.</p>
-            ) : (
-              (role === "admin"
-                ? rows
-                : payments
-              ).map((value, i) => {
-                const item = value as Payment & {
-                  id?: string;
-                  customer?: string;
-                };
-
-                const key =
-                  item.id ||
-                  item._id ||
-                  String(i);
-
-                return (
-                  <div
-                    key={key}
-                    className="flex flex-wrap items-center justify-between gap-4 border-t py-4 text-sm"
-                  >
-                    <div>
-                      <b>৳{item.amount}</b>
-
-                      <span className="ml-2 text-gray-500">
-                        {item.status}
-                      </span>
-
-                      <p className="text-gray-500">
-                        {role === "admin"
-                          ? `Customer: ${item.customer || "Unknown"} · Fee: ৳${item.platformFee}`
-                          : `Booking: ${
-                              typeof item.booking ===
-                              "string"
-                                ? item.booking.slice(
-                                    -6
-                                  )
-                                : item.booking?._id?.slice(
-                                    -6
-                                  )
-                            }`}
-                      </p>
-                    </div>
-
-                    {role === "admin" &&
-                      [
-                        "pending",
-                        "paid",
-                      ].includes(item.status) && (
-                        <button
-                          disabled={busy}
-                          className={
-                            secondary
-                          }
-                          onClick={() =>
-                            void action(
-                              `/api/payments/${key}`,
-                              "PATCH",
-                              {
-                                status:
-                                  item.status ===
-                                  "pending"
-                                    ? "paid"
-                                    : "refunded",
-                              }
-                            )
-                          }
-                        >
-                          Mark{" "}
-                          {item.status ===
-                          "pending"
-                            ? "paid"
-                            : "refunded"}
-                        </button>
-                      )}
-                  </div>
-                );
-              })
-            )}
-
-            <p className="mt-4 text-xs text-gray-500">
-              Payments are manual cash
-              records; marking paid does not
-              transfer money.
+            <p className="mt-3 text-xs text-gray-500">
+              These are bookkeeping records.
+              No wallet or bank transfer is
+              made by TrustHand.
             </p>
-          </section>
+          </div>
         )}
 
-      {/* CUSTOMER REVIEWS */}
       {!loading &&
-        section === "reviews" &&
-        role === "customer" && (
-          <section className={panel}>
-            <h2 className="mb-4 text-xl font-bold">
+        role === "customer" &&
+        section === "reviews" && (
+          <div className={panel}>
+            <h2 className="mb-3 text-xl font-bold">
               My reviews
             </h2>
 
             {reviews.map((r) => (
-              <div
-                className="border-b py-3 text-sm"
+              <p
                 key={r._id}
+                className="border-b py-3 text-sm"
               >
                 ★ {r.rating}/5 —{" "}
                 {r.comment || "No comment"}
-              </div>
+              </p>
             ))}
 
-            {reviews.length === 0 && (
-              <p className="mb-4 text-sm text-gray-500">
-                No reviews yet.
+            {!reviews.length && (
+              <p className="text-sm text-gray-500">
+                You have not left a review.
               </p>
             )}
 
@@ -895,29 +676,19 @@ export default function DashboardView({
               ) => {
                 e.preventDefault();
 
-                void action(
-                  "/api/reviews",
-                  "POST",
-                  {
-                    bookingId:
-                      form.bookingId,
-                    rating: Number(
-                      form.rating || 5
-                    ),
-                    comment:
-                      form.comment || "",
-                  }
-                );
+                void act("/api/reviews", "POST", {
+                  bookingId: form.bookingId,
+                  rating: Number(form.rating || 5),
+                  comment: form.comment || "",
+                });
               }}
             >
               <select
                 required
-                className={inputStyle}
-                value={
-                  form.bookingId || ""
-                }
+                className={input}
+                value={form.bookingId || ""}
                 onChange={(e) =>
-                  onForm(
+                  setField(
                     "bookingId",
                     e.target.value
                   )
@@ -930,13 +701,10 @@ export default function DashboardView({
                 {bookings
                   .filter(
                     (b) =>
-                      b.status ===
-                        "completed" &&
+                      b.status === "completed" &&
                       !reviews.some(
                         (r) =>
-                          String(
-                            r.booking
-                          ) === b._id
+                          String(r.booking) === b._id
                       )
                   )
                   .map((b) => (
@@ -944,50 +712,37 @@ export default function DashboardView({
                       key={b._id}
                       value={b._id}
                     >
-                      {displayName(
-                        b.service
-                      )}
+                      {displayName(b.service)}
                       {" — "}
-                      {displayDate(
-                        b.scheduledAt
-                      )}
+                      {displayDate(b.scheduledAt)}
                     </option>
                   ))}
               </select>
 
               <select
-                className={inputStyle}
-                value={
-                  form.rating || "5"
-                }
+                className={input}
+                value={form.rating || "5"}
                 onChange={(e) =>
-                  onForm(
+                  setField(
                     "rating",
                     e.target.value
                   )
                 }
               >
-                {[5, 4, 3, 2, 1].map(
-                  (n) => (
-                    <option
-                      key={n}
-                      value={n}
-                    >
-                      {n} stars
-                    </option>
-                  )
-                )}
+                {[5, 4, 3, 2, 1].map((n) => (
+                  <option key={n} value={n}>
+                    {n} stars
+                  </option>
+                ))}
               </select>
 
               <textarea
+                className={`${input} sm:col-span-2`}
                 maxLength={1000}
                 placeholder="Share your experience"
-                className={`${inputStyle} sm:col-span-2`}
-                value={
-                  form.comment || ""
-                }
+                value={form.comment || ""}
                 onChange={(e) =>
-                  onForm(
+                  setField(
                     "comment",
                     e.target.value
                   )
@@ -996,19 +751,19 @@ export default function DashboardView({
 
               <button
                 disabled={busy}
-                className={primary}
+                className={button}
               >
                 Submit review
               </button>
             </form>
-          </section>
+          </div>
         )}
 
-      {/* CUSTOMER / WORKER PROFILE */}
       {!loading &&
         section === "profile" &&
+        role !== "admin" &&
         profile && (
-          <section className={panel}>
+          <div className={panel}>
             <h2 className="mb-4 text-xl font-bold">
               Manage profile
             </h2>
@@ -1016,7 +771,7 @@ export default function DashboardView({
             <p className="mb-5 text-sm text-gray-500">
               Email: {profile.email}
               {role === "worker" &&
-                ` · Verification: ${profile.verificationStatus}`}
+                ` · Review: ${profile.verificationStatus}`}
             </p>
 
             <form
@@ -1033,41 +788,34 @@ export default function DashboardView({
                           form.phone ??
                           profile.phone ??
                           "",
-
                         bio:
                           form.bio ??
                           profile.bio ??
                           "",
-
-                        experienceYears:
-                          Number(
-                            form.experienceYears ??
-                              profile.experienceYears ??
-                              0
-                          ),
-
+                        experienceYears: Number(
+                          form.experienceYears ??
+                            profile.experienceYears ??
+                            0
+                        ),
                         available:
-                          (form.available ??
+                          (
+                            form.available ??
                             String(
-                              profile.available ??
-                                true
-                            )) === "true",
-
-                        services:
-                          selectedServices,
+                              profile.available ?? true
+                            )
+                          ) === "true",
+                        services: selectedServices,
                       }
                     : {
                         name:
-                          form.name ??
-                          profile.name,
-
+                          form.name ?? profile.name,
                         phone:
                           form.phone ??
                           profile.phone ??
                           "",
                       };
 
-                void action(
+                void act(
                   role === "worker"
                     ? "/api/workers/me"
                     : "/api/users/me",
@@ -1079,17 +827,13 @@ export default function DashboardView({
               {role === "customer" && (
                 <label className="text-sm">
                   Name
-
                   <input
-                    className={
-                      inputStyle
-                    }
+                    className={input}
                     value={
-                      form.name ??
-                      profile.name
+                      form.name ?? profile.name
                     }
                     onChange={(e) =>
-                      onForm(
+                      setField(
                         "name",
                         e.target.value
                       )
@@ -1100,18 +844,15 @@ export default function DashboardView({
 
               <label className="text-sm">
                 Phone
-
                 <input
-                  className={
-                    inputStyle
-                  }
+                  className={input}
                   value={
                     form.phone ??
                     profile.phone ??
                     ""
                   }
                   onChange={(e) =>
-                    onForm(
+                    setField(
                       "phone",
                       e.target.value
                     )
@@ -1123,21 +864,16 @@ export default function DashboardView({
                 <>
                   <label className="text-sm sm:col-span-2">
                     Professional bio
-
                     <textarea
-                      className={
-                        inputStyle
-                      }
+                      className={input}
                       maxLength={1000}
                       value={
                         form.bio ??
                         profile.bio ??
                         ""
                       }
-                      onChange={(
-                        e
-                      ) =>
-                        onForm(
+                      onChange={(e) =>
+                        setField(
                           "bio",
                           e.target.value
                         )
@@ -1147,25 +883,19 @@ export default function DashboardView({
 
                   <label className="text-sm">
                     Years of experience
-
                     <input
+                      className={input}
                       type="number"
                       min="0"
                       max="70"
-                      className={
-                        inputStyle
-                      }
                       value={
                         form.experienceYears ??
                         String(
-                          profile.experienceYears ??
-                            0
+                          profile.experienceYears ?? 0
                         )
                       }
-                      onChange={(
-                        e
-                      ) =>
-                        onForm(
+                      onChange={(e) =>
+                        setField(
                           "experienceYears",
                           e.target.value
                         )
@@ -1175,22 +905,16 @@ export default function DashboardView({
 
                   <label className="text-sm">
                     Availability
-
                     <select
-                      className={
-                        inputStyle
-                      }
+                      className={input}
                       value={
                         form.available ??
                         String(
-                          profile.available ??
-                            true
+                          profile.available ?? true
                         )
                       }
-                      onChange={(
-                        e
-                      ) =>
-                        onForm(
+                      onChange={(e) =>
+                        setField(
                           "available",
                           e.target.value
                         )
@@ -1207,55 +931,43 @@ export default function DashboardView({
 
                   <fieldset className="sm:col-span-2">
                     <legend className="mb-2 text-sm font-bold">
-                      My offered services
+                      Offered services
                     </legend>
 
                     <div className="grid gap-2 sm:grid-cols-2">
-                      {services.map(
-                        (s) => (
-                          <label
-                            key={s._id}
-                            className="flex items-center gap-2 text-sm"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedServices.includes(
-                                s._id
-                              )}
-                              onChange={(
-                                e
-                              ) =>
-                                setSelectedServices(
-                                  (
-                                    current
-                                  ) =>
-                                    e.target
-                                      .checked
-                                      ? [
-                                          ...current,
-                                          s._id,
-                                        ]
-                                      : current.filter(
-                                          (
-                                            id
-                                          ) =>
-                                            id !==
-                                            s._id
-                                        )
-                                )
-                              }
-                            />
-
-                            {s.name}
-                          </label>
-                        )
-                      )}
+                      {services.map((s) => (
+                        <label
+                          className="flex gap-2 text-sm"
+                          key={s._id}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedServices.includes(
+                              s._id
+                            )}
+                            onChange={(e) =>
+                              setSelectedServices(
+                                (current) =>
+                                  e.target.checked
+                                    ? [
+                                        ...current,
+                                        s._id,
+                                      ]
+                                    : current.filter(
+                                        (id) =>
+                                          id !== s._id
+                                      )
+                              )
+                            }
+                          />
+                          {s.name}
+                        </label>
+                      ))}
                     </div>
 
                     <p className="mt-2 text-xs text-gray-500">
-                      Changing services
-                      may require admin
-                      re-verification.
+                      Service changes may require
+                      admin review.
                     </p>
                   </fieldset>
                 </>
@@ -1264,144 +976,119 @@ export default function DashboardView({
               <div>
                 <button
                   disabled={busy}
-                  className={
-                    primary
-                  }
+                  className={button}
                 >
                   Save changes
                 </button>
               </div>
             </form>
-          </section>
+          </div>
         )}
 
-      {/* ADMIN CUSTOMERS AND WORKERS */}
       {!loading &&
         role === "admin" &&
-        [
-          "customers",
-          "workers",
-        ].includes(section) && (
-          <section className={panel}>
-            <h2 className="mb-4 text-xl font-bold">
+        (
+          section === "customers" ||
+          section === "workers"
+        ) && (
+          <div className={panel}>
+            <h2 className="mb-3 text-xl font-bold">
               {section === "workers"
-                ? "Verify workers"
+                ? "Review worker applications"
                 : "Manage customers"}
             </h2>
 
-            {rows.length === 0 && (
+            {!people.length && (
               <p>No records found.</p>
             )}
 
-            {rows.map((row) => {
-              const item =
-                row as Person;
+            {people.map((p) => (
+              <div
+                key={p.id}
+                className="flex flex-wrap items-center justify-between gap-3 border-t py-4 text-sm"
+              >
+                <div>
+                  <b>{p.name}</b>
+                  {" ("}
+                  {p.email}
+                  {")"}
 
-              return (
-                <div
-                  key={item.id}
-                  className="flex flex-wrap items-center justify-between gap-4 border-t py-4 text-sm"
-                >
-                  <div>
-                    <b>
-                      {item.name}
-                    </b>{" "}
+                  <p className="text-xs text-gray-500">
+                    {p.district || "Area not set"}
+                    {" · "}
+                    {section === "workers"
+                      ? p.verificationStatus
+                      : p.status}
+                  </p>
+                </div>
 
-                    <span className="text-gray-500">
-                      ({item.email})
-                    </span>
-
-                    <p>
-                      {item.district ||
-                        "Area not set"}
-                      {" · "}
-
-                      {section ===
-                      "workers"
-                        ? item.verificationStatus
-                        : item.status}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {section ===
-                    "workers" ? (
-                      [
-                        "approved",
-                        "rejected",
-                        "pending",
-                      ].map((s) => (
-                        <button
-                          disabled={
-                            busy ||
-                            item.verificationStatus ===
-                              s
-                          }
-                          key={s}
-                          className={
-                            secondary
-                          }
-                          onClick={() =>
-                            void action(
-                              `/api/admin/workers/${item.id}`,
-                              "PATCH",
-                              {
-                                verificationStatus:
-                                  s,
-                              }
-                            )
-                          }
-                        >
-                          {s}
-                        </button>
-                      ))
-                    ) : (
+                <div className="flex flex-wrap gap-2">
+                  {section === "workers" ? (
+                    [
+                      "approved",
+                      "rejected",
+                      "pending",
+                    ].map((v) => (
                       <button
-                        disabled={busy}
-                        className={
-                          secondary
+                        key={v}
+                        className={outline}
+                        disabled={
+                          busy ||
+                          p.verificationStatus === v
                         }
                         onClick={() =>
-                          void action(
-                            `/api/admin/users/${item.id}`,
+                          void act(
+                            `/api/admin/workers/${p.id}`,
                             "PATCH",
                             {
-                              status:
-                                item.status ===
-                                "active"
-                                  ? "suspended"
-                                  : "active",
+                              verificationStatus: v,
                             }
                           )
                         }
                       >
-                        {item.status ===
-                        "active"
-                          ? "Suspend"
-                          : "Activate"}
+                        {v}
                       </button>
-                    )}
-                  </div>
+                    ))
+                  ) : (
+                    <button
+                      className={outline}
+                      disabled={busy}
+                      onClick={() =>
+                        void act(
+                          `/api/admin/users/${p.id}`,
+                          "PATCH",
+                          {
+                            status:
+                              p.status === "active"
+                                ? "suspended"
+                                : "active",
+                          }
+                        )
+                      }
+                    >
+                      {p.status === "active"
+                        ? "Suspend"
+                        : "Activate"}
+                    </button>
+                  )}
                 </div>
-              );
-            })}
+              </div>
+            ))}
 
             {section === "workers" && (
               <p className="mt-4 text-xs text-gray-500">
-                Do not approve from AI
-                suggestions alone; verify
-                credentials through your
-                established human process.
+                Check credentials manually.
+                AI suggestions do not establish
+                identity verification.
               </p>
             )}
-          </section>
+          </div>
         )}
 
-      {/* ADMIN SERVICE MANAGEMENT */}
       {!loading &&
         role === "admin" &&
         section === "services" && (
-          <section className={panel}>
+          <div className={panel}>
             <h2 className="mb-4 text-xl font-bold">
               Service catalog
             </h2>
@@ -1416,7 +1103,7 @@ export default function DashboardView({
 
                   <p className="text-gray-500">
                     {s.category}
-                    {" · "}৳
+                    {" · ৳"}
                     {s.basePrice}
                     {" · "}
                     {s.active
@@ -1428,16 +1115,13 @@ export default function DashboardView({
                 {s.active && (
                   <button
                     disabled={busy}
-                    className={
-                      secondary
-                    }
+                    className={outline}
                     onClick={() =>
-                      void action(
+                      void act(
                         `/api/services/${s._id}`,
                         "PATCH",
                         {
-                          active:
-                            false,
+                          active: false,
                         }
                       )
                     }
@@ -1454,89 +1138,56 @@ export default function DashboardView({
 
             <form
               className="grid gap-3 sm:grid-cols-2"
-              onSubmit={(e) => {
+              onSubmit={(
+                e: FormEvent<HTMLFormElement>
+              ) => {
                 e.preventDefault();
 
-                void action(
+                void act(
                   "/api/services",
                   "POST",
                   {
-                    name:
-                      form.serviceName,
-                    slug:
-                      form.slug,
-                    category:
-                      form.category,
+                    name: form.serviceName,
+                    slug: form.slug,
+                    category: form.category,
                     description:
-                      form.description ||
-                      "",
-                    basePrice:
-                      Number(
-                        form.basePrice
-                      ),
-                    active:
-                      true,
+                      form.description || "",
+                    basePrice: Number(
+                      form.basePrice
+                    ),
+                    active: true,
                   }
                 );
               }}
             >
-              {[
-                [
-                  "serviceName",
-                  "Name",
-                ],
-                [
-                  "slug",
-                  "Slug (e.g. ac-repair)",
-                ],
-                [
-                  "category",
-                  "Category",
-                ],
-                [
-                  "basePrice",
-                  "Base price (BDT)",
-                ],
-                [
-                  "description",
-                  "Description",
-                ],
-              ].map(
-                ([
-                  key,
-                  placeholder,
-                ]) => (
+              {([
+                ["serviceName", "Name"],
+                ["slug", "Slug (e.g. ac-repair)"],
+                ["category", "Category"],
+                ["basePrice", "Base price (BDT)"],
+                ["description", "Description"],
+              ] as const).map(
+                ([key, placeholder]) => (
                   <input
                     key={key}
+                    className={input}
+                    placeholder={placeholder}
                     required={
-                      key !==
-                      "description"
+                      key !== "description"
                     }
                     type={
-                      key ===
-                      "basePrice"
+                      key === "basePrice"
                         ? "number"
                         : "text"
                     }
                     min={
-                      key ===
-                      "basePrice"
+                      key === "basePrice"
                         ? "0"
                         : undefined
                     }
-                    className={
-                      inputStyle
-                    }
-                    placeholder={
-                      placeholder
-                    }
-                    value={
-                      form[key] || ""
-                    }
-                    onChange={(
-                      e
-                    ) =>
-                      onForm(
+                    value={form[key] || ""}
+                    onChange={(e) =>
+                      setField(
                         key,
                         e.target.value
                       )
@@ -1547,39 +1198,38 @@ export default function DashboardView({
 
               <button
                 disabled={busy}
-                className={primary}
+                className={button}
               >
                 Create service
               </button>
             </form>
-          </section>
+          </div>
         )}
 
-      {/* ADMIN SETTINGS */}
       {!loading &&
         role === "admin" &&
         section === "settings" &&
         settings && (
-          <section className={panel}>
+          <div className={panel}>
             <h2 className="mb-4 text-xl font-bold">
               Platform settings
             </h2>
 
             <form
               className="max-w-xl space-y-4"
-              onSubmit={(e) => {
+              onSubmit={(
+                e: FormEvent<HTMLFormElement>
+              ) => {
                 e.preventDefault();
 
-                void action(
+                void act(
                   "/api/admin/settings",
                   "PUT",
                   {
-                    serviceFeePercent:
-                      Number(
-                        form.serviceFeePercent ??
-                          settings.serviceFeePercent
-                      ),
-
+                    serviceFeePercent: Number(
+                      form.serviceFeePercent ??
+                        settings.serviceFeePercent
+                    ),
                     supportEmail:
                       form.supportEmail ??
                       settings.supportEmail,
@@ -1591,9 +1241,7 @@ export default function DashboardView({
                 Service fee %
 
                 <input
-                  className={
-                    inputStyle
-                  }
+                  className={input}
                   type="number"
                   min="0"
                   max="30"
@@ -1604,10 +1252,8 @@ export default function DashboardView({
                       settings.serviceFeePercent
                     )
                   }
-                  onChange={(
-                    e
-                  ) =>
-                    onForm(
+                  onChange={(e) =>
+                    setField(
                       "serviceFeePercent",
                       e.target.value
                     )
@@ -1619,18 +1265,14 @@ export default function DashboardView({
                 Support email
 
                 <input
-                  className={
-                    inputStyle
-                  }
+                  className={input}
                   type="email"
                   value={
                     form.supportEmail ??
                     settings.supportEmail
                   }
-                  onChange={(
-                    e
-                  ) =>
-                    onForm(
+                  onChange={(e) =>
+                    setField(
                       "supportEmail",
                       e.target.value
                     )
@@ -1640,12 +1282,12 @@ export default function DashboardView({
 
               <button
                 disabled={busy}
-                className={primary}
+                className={button}
               >
                 Save settings
               </button>
             </form>
-          </section>
+          </div>
         )}
     </div>
   );

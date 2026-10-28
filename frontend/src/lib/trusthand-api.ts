@@ -4,7 +4,10 @@ export type LocationOption = {
   bnName: string;
 };
 
-export type UserRole = "customer" | "worker" | "admin";
+export type UserRole =
+  | "customer"
+  | "worker"
+  | "admin";
 
 export type AuthResponse = {
   user: {
@@ -29,14 +32,25 @@ export async function apiJson<T>(
   path: string,
   init: RequestInit = {}
 ): Promise<T> {
-  if (!path.startsWith("/api/") || path.startsWith("//")) {
+  if (
+    !path.startsWith("/api/") ||
+    path.startsWith("//")
+  ) {
     throw new Error("Invalid API path");
   }
 
-  const headers = new Headers(init.headers);
+  const headers = new Headers(
+    init.headers
+  );
 
-  if (init.body && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
+  if (
+    init.body &&
+    !headers.has("Content-Type")
+  ) {
+    headers.set(
+      "Content-Type",
+      "application/json"
+    );
   }
 
   let response: Response;
@@ -50,32 +64,44 @@ export async function apiJson<T>(
     });
   } catch {
     throw new Error(
-      "Unable to connect to the app API. Is Next.js running?"
+      "Unable to connect to TrustHand API."
     );
   }
 
-  const payload = (await response
-    .json()
-    .catch(() => null)) as ApiEnvelope<T> | null;
+  const payload = (
+    await response.json().catch(() => null)
+  ) as ApiEnvelope<T> | null;
 
-  if (!response.ok || payload?.success === false) {
+  if (
+    !response.ok ||
+    payload?.success === false
+  ) {
     throw new Error(
-      payload?.message || `HTTP ${response.status}`
+      payload?.message ||
+      `HTTP ${response.status}`
     );
   }
 
   if (
     !payload ||
-    (payload.data === undefined &&
-      (init.method || "GET").toUpperCase() === "GET")
+    (
+      payload.data === undefined &&
+      (init.method || "GET").toUpperCase() === "GET"
+    )
   ) {
-    throw new Error("Unexpected response from backend");
+    throw new Error(
+      "Unexpected backend response"
+    );
   }
 
   return payload.data as T;
 }
 
-export function saveAuth({ user }: AuthResponse) {
+// User information is UI-only;
+// session credentials stay in HttpOnly cookie.
+export function saveAuth({
+  user,
+}: AuthResponse) {
   if (typeof window !== "undefined") {
     sessionStorage.setItem(
       "trusthand_user",
@@ -85,12 +111,23 @@ export function saveAuth({ user }: AuthResponse) {
 }
 
 export async function clearAuth(): Promise<void> {
+  const result = await fetch(
+    "/api/auth/logout",
+    {
+      method: "POST",
+      credentials: "same-origin",
+    }
+  );
+
   if (typeof window !== "undefined") {
-    sessionStorage.removeItem("trusthand_user");
+    sessionStorage.removeItem(
+      "trusthand_user"
+    );
   }
 
-  await fetch("/api/auth/logout", {
-    method: "POST",
-    credentials: "same-origin",
-  });
+  if (!result.ok) {
+    throw new Error(
+      "Local sign-out completed, but server revocation could not be confirmed."
+    );
+  }
 }
