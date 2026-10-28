@@ -1,35 +1,42 @@
+
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+import {
+  apiAuth,
+  type Profile,
+} from "@/lib/dashboard-api";
+
 export default function DashboardPage() {
-  <h2>Dashboard Home Page</h2>;
+  const router = useRouter();
+
+  useEffect(() => {
+    let active = true;
+
+    apiAuth<Profile>("/api/auth/me")
+      .then((user) => {
+        if (active) {
+          router.replace(
+            `/dashboard/${user.role}`
+          );
+        }
+      })
+      .catch(() => {
+        if (active) {
+          router.replace("/login");
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [router]);
+
+  return (
+    <main className="p-10 text-center text-slate-600">
+      Opening your dashboard...
+    </main>
+  );
 }
-
-
-// import { redirect } from "next/navigation";
-// import { headers } from "next/headers";
-
-// import { auth } from "@/lib/auth";
-
-// export default async function DashboardPage() {
-//   const session = await auth.api.getSession({
-//     headers: await headers(),
-//   });
-
-//   if (!session?.user) {
-//     redirect("/login");
-//   }
-
-//   const role = session.user.role;
-
-//   if (role === "FARMER") {
-//     redirect("/dashboard/farmer");
-//   }
-
-//   if (role === "EXPERT") {
-//     redirect("/dashboard/expert");
-//   }
-
-//   if (role === "ADMIN") {
-//     redirect("/dashboard/admin");
-//   }
-
-//   redirect("/");
-// }
