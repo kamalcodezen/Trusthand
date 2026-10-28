@@ -23,6 +23,10 @@ import {
 
 const mode = "mongo";
 
+// ============================
+// FORMAT USERS
+// ============================
+
 const formatUser = (v: any) => ({
   id: String(v._id),
   name: v.name,
@@ -34,9 +38,14 @@ const formatUser = (v: any) => ({
   upazila: v.upazila ?? "",
   role: v.role,
   status: v.status,
+  isDemo: v.isDemo === true,
   verificationStatus: v.verificationStatus,
   joinedAt: dateString(v.createdAt),
 });
+
+// ============================
+// FORMAT BOOKINGS
+// ============================
 
 const formatBooking = (v: any) => ({
   id: String(v._id),
@@ -46,7 +55,14 @@ const formatBooking = (v: any) => ({
   scheduledAt: dateString(v.scheduledAt),
   amount: v.amount,
   status: v.status,
+  isDemo:
+    v.customer?.isDemo === true ||
+    v.worker?.isDemo === true,
 });
+
+// ============================
+// FORMAT PAYMENTS
+// ============================
 
 const formatPayment = (v: any) => ({
   id: String(v._id),
@@ -58,7 +74,14 @@ const formatPayment = (v: any) => ({
   platformFee: v.platformFee,
   status: v.status,
   paidAt: dateString(v.paidAt),
+  isDemo:
+    v.customer?.isDemo === true ||
+    v.worker?.isDemo === true,
 });
+
+// ============================
+// POPULATE BOOKING DETAILS
+// ============================
 
 const includeBooking = [
   {
@@ -67,13 +90,17 @@ const includeBooking = [
   },
   {
     path: "customer",
-    select: "name",
+    select: "name isDemo",
   },
   {
     path: "worker",
-    select: "name",
+    select: "name isDemo",
   },
 ];
+
+// ============================
+// LIST CUSTOMERS
+// ============================
 
 export const listUsers: RequestHandler =
   async (_req, res) => {
@@ -90,6 +117,10 @@ export const listUsers: RequestHandler =
     });
   };
 
+// ============================
+// LIST WORKERS
+// ============================
+
 export const listWorkersAdmin: RequestHandler =
   async (_req, res) => {
     const users = await User.find({
@@ -105,6 +136,10 @@ export const listWorkersAdmin: RequestHandler =
     });
   };
 
+// ============================
+// LIST BOOKINGS
+// ============================
+
 export const listBookingsAdmin: RequestHandler =
   async (_req, res) => {
     const items = await Booking.find()
@@ -119,12 +154,17 @@ export const listBookingsAdmin: RequestHandler =
     });
   };
 
+// ============================
+// LIST PAYMENTS
+// ============================
+
 export const listPaymentsAdmin: RequestHandler =
   async (_req, res) => {
     const items = await Payment.find()
       .sort({ createdAt: -1 })
       .limit(200)
-      .populate("customer", "name")
+      .populate("customer", "name isDemo")
+      .populate("worker", "name isDemo")
       .lean();
 
     res.json({
@@ -132,6 +172,10 @@ export const listPaymentsAdmin: RequestHandler =
       mode,
     });
   };
+
+// ============================
+// GET ADMIN SETTINGS
+// ============================
 
 export const getAdminSettings: RequestHandler =
   async (_req, res) => {
@@ -145,6 +189,10 @@ export const getAdminSettings: RequestHandler =
       mode,
     });
   };
+
+// ============================
+// UPDATE ADMIN SETTINGS
+// ============================
 
 export const updateAdminSettings: RequestHandler =
   async (req, res) => {
@@ -186,6 +234,10 @@ export const updateAdminSettings: RequestHandler =
     });
   };
 
+// ============================
+// UPDATE CUSTOMER STATUS
+// ============================
+
 export const updateUserStatus: RequestHandler =
   async (req, res) => {
     const input = body(
@@ -222,6 +274,10 @@ export const updateUserStatus: RequestHandler =
       data: formatUser(user),
     });
   };
+
+// ============================
+// UPDATE WORKER STATUS
+// ============================
 
 export const updateWorkerStatus: RequestHandler =
   async (req, res) => {
@@ -261,11 +317,28 @@ export const updateWorkerStatus: RequestHandler =
     });
   };
 
+// ============================
+// ADMIN BOOKING STATUS
+// ============================
+
 export const adminChangeBooking =
   updateBookingStatus;
 
+// ============================
+// ADMIN OVERVIEW
+// ============================
+
 export const getOverview: RequestHandler =
   async (_req, res) => {
+    const activeStatuses = [
+      "pending",
+      "quoted",
+      "confirmed",
+      "in_progress",
+      "awaiting_completion",
+    ];
+
+    // Original total statistics.
     const [
       customers,
       workers,
@@ -300,13 +373,7 @@ export const getOverview: RequestHandler =
 
       Booking.countDocuments({
         status: {
-          $in: [
-            "pending",
-            "quoted",
-            "confirmed",
-            "in_progress",
-            "awaiting_completion",
-          ],
+          $in: activeStatuses,
         },
       }),
 
@@ -348,6 +415,199 @@ export const getOverview: RequestHandler =
         .lean(),
     ]);
 
+    // ============================
+    // IDENTIFY DEMO ACCOUNTS
+    // ============================
+
+    const demoUserIds = await User.distinct(
+      "_id",
+      {
+        isDemo: true,
+      }
+    );
+
+    // A booking is demo if either participant is demo.
+    const demoBookingFilter = {
+      $or: [
+        {
+          customer: {
+            $in: demoUserIds,
+          },
+        },
+        {
+          worker: {
+            $in: demoUserIds,
+          },
+        },
+      ],
+    };
+
+    const demoPaymentFilter = {
+      $or: [
+        {
+          customer: {
+            $in: demoUserIds,
+          },
+        },
+        {
+          worker: {
+            $in: demoUserIds,
+          },
+        },
+      ],
+    };
+
+    // ============================
+    // DEMO STATISTICS
+    // ============================
+
+    const [
+      demoCustomers,
+      demoWorkers,
+      demoPendingVerifications,
+      demoApprovedWorkers,
+      demoBookings,
+      demoActiveBookings,
+      demoCompletedBookings,
+      demoPaidStats,
+    ] = await Promise.all([
+      User.countDocuments({
+        role: "customer",
+        isDemo: true,
+      }),
+
+      User.countDocuments({
+        role: "worker",
+        isDemo: true,
+      }),
+
+      User.countDocuments({
+        role: "worker",
+        isDemo: true,
+        verificationStatus: "pending",
+      }),
+
+      User.countDocuments({
+        role: "worker",
+        isDemo: true,
+        verificationStatus: "approved",
+      }),
+
+      Booking.countDocuments(
+        demoBookingFilter
+      ),
+
+      Booking.countDocuments({
+        ...demoBookingFilter,
+        status: {
+          $in: activeStatuses,
+        },
+      }),
+
+      Booking.countDocuments({
+        ...demoBookingFilter,
+        status: "completed",
+      }),
+
+      Payment.aggregate([
+        {
+          $match: {
+            status: "paid",
+            ...demoPaymentFilter,
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            grossPayments: {
+              $sum: "$amount",
+            },
+            earnedFees: {
+              $sum: "$platformFee",
+            },
+          },
+        },
+      ]),
+    ]);
+
+    // ============================
+    // CALCULATE FINANCIAL TOTALS
+    // ============================
+
+    const grossPayments =
+      paidStats[0]?.grossPayments ?? 0;
+
+    const earnedFees =
+      paidStats[0]?.earnedFees ?? 0;
+
+    const demoGrossPayments =
+      demoPaidStats[0]?.grossPayments ?? 0;
+
+    const demoEarnedFees =
+      demoPaidStats[0]?.earnedFees ?? 0;
+
+    // ============================
+    // DEMO BREAKDOWN
+    // ============================
+
+    const demo = {
+      customers: demoCustomers,
+      workers: demoWorkers,
+      pendingVerifications:
+        demoPendingVerifications,
+      approvedWorkers:
+        demoApprovedWorkers,
+      bookings: demoBookings,
+      activeBookings:
+        demoActiveBookings,
+      completedBookings:
+        demoCompletedBookings,
+      grossPayments:
+        demoGrossPayments,
+      earnedFees:
+        demoEarnedFees,
+    };
+
+    // ============================
+    // REAL BREAKDOWN
+    // ============================
+
+    const real = {
+      customers:
+        customers - demoCustomers,
+
+      workers:
+        workers - demoWorkers,
+
+      pendingVerifications:
+        pendingVerifications -
+        demoPendingVerifications,
+
+      approvedWorkers:
+        approvedWorkers -
+        demoApprovedWorkers,
+
+      bookings:
+        bookings - demoBookings,
+
+      activeBookings:
+        activeBookings - demoActiveBookings,
+
+      completedBookings:
+        completedBookings -
+        demoCompletedBookings,
+
+      grossPayments:
+        grossPayments - demoGrossPayments,
+
+      earnedFees:
+        earnedFees - demoEarnedFees,
+    };
+
+    // ============================
+    // API RESPONSE
+    // ============================
+
     res.json({
       data: {
         customers,
@@ -358,11 +618,8 @@ export const getOverview: RequestHandler =
         activeBookings,
         completedBookings,
 
-        grossPayments:
-          paidStats[0]?.grossPayments ?? 0,
-
-        earnedFees:
-          paidStats[0]?.earnedFees ?? 0,
+        grossPayments,
+        earnedFees,
 
         recentBookings:
           recent.map(formatBooking),
@@ -370,7 +627,14 @@ export const getOverview: RequestHandler =
         newWorkers:
           newWorkers.map(formatUser),
 
-        isSample: false,
+        isSample:
+          demoCustomers > 0 ||
+          demoWorkers > 0 ||
+          demoBookings > 0,
+
+        real,
+        demo,
+
         limitedTo: 200,
       },
       mode,

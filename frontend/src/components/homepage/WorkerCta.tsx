@@ -21,7 +21,7 @@ export default function WorkerCta() {
               </h2>
 
               <p className="mt-4 text-sm leading-relaxed text-[var(--color-trust-green-badge)] sm:text-base max-w-xl">
-                Are you an experienced electrician, plumber, AC expert, or appliance mechanic in Dhaka? Join TrustHand to connect directly with dignified homeowners with 0% platform commission cuts.
+                Are you an experienced electrician, plumber, AC expert, or appliance mechanic in Dhaka? Join TrustHand to connect directly with dignified homeowners and manage quotations through TrustHand.
               </p>
 
               {/* Feature Checkpoints */}
@@ -32,7 +32,7 @@ export default function WorkerCta() {
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 size={16} className="text-[var(--color-trust-green-badge)]" />
-                  <span>100% direct payouts</span>
+                  <span>Quotation-based bookings</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 size={16} className="text-[var(--color-trust-green-badge)]" />
@@ -43,7 +43,7 @@ export default function WorkerCta() {
               {/* Action Button - Styled with theme palette */}
               <div className="mt-8">
                 <Link
-                  href="/onboarding/professional"
+                  href="/register"
                   className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3.5 text-xs font-bold text-[var(--color-trust-green-dark)] transition-all duration-300 hover:bg-[var(--color-trust-green-badge)] hover:scale-105 shadow-md"
                 >
                   Apply as a Professional

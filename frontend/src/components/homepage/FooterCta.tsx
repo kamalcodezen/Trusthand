@@ -24,17 +24,17 @@ export default function FooterCta() {
         {/* Action Buttons */}
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
-            href="/workers"
+            href="/find-workers"
             className="w-full sm:w-auto rounded-full bg-white px-7 py-3.5 text-xs font-extrabold text-[var(--color-trust-green-dark)] transition-all duration-300 hover:bg-[var(--color-trust-bg-light)] hover:scale-105 shadow-md text-center"
           >
             Explore All Workers in Dhaka
           </Link>
 
           <Link
-            href="/post-job"
+            href="/find-workers"
             className="w-full sm:w-auto rounded-full border border-[#2A4D3E] bg-[var(--color-trust-footer)] px-7 py-3.5 text-xs font-extrabold text-white transition-all duration-300 hover:bg-[var(--color-trust-green-main)] text-center"
           >
-            Post a Free Request
+            Choose a Worker to Request
           </Link>
         </div>
 
